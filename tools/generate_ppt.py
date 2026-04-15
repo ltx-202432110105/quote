@@ -42,6 +42,10 @@ MARKDOWN_LANGUAGE_MARKERS = {"text", "yaml", "json", "sql", "go", "bash"}
 TECH_LAYOUT_KEYWORDS = ("架构", "技术", "部署", "实现")
 REFERENCE_PDF = "比赛用的最终ppt.pdf"
 GO_LOGO_PLACEMENT = (Inches(10.7), Inches(1.52), Inches(2.0))
+LAYOUT_DEFAULT = "A"
+LAYOUT_DOUBLE = "B"
+LAYOUT_CHAPTER = "C"
+LAYOUT_TIMELINE = "D"
 
 
 @dataclass
@@ -217,14 +221,14 @@ def select_layout(unit: SlideUnit) -> str:
     title_text = unit.title.lower()
     all_text = f"{unit.title} {' '.join(unit.bullets)}".lower()
     if unit.is_transition:
-        return "C"
+        return LAYOUT_CHAPTER
     if any(k in all_text for k in PROCESS_KEYWORDS) and unit.bullets:
-        return "D"
+        return LAYOUT_TIMELINE
     if unit.table or len(unit.bullets) >= 5:
-        return "B"
+        return LAYOUT_DOUBLE
     if any(k in title_text for k in TECH_LAYOUT_KEYWORDS):
-        return "A"
-    return "A"
+        return LAYOUT_DEFAULT
+    return LAYOUT_DEFAULT
 
 
 def need_go_logo(unit: SlideUnit) -> bool:
@@ -465,12 +469,12 @@ def add_go_logo_if_needed(slide, unit: SlideUnit, logo_path: Path) -> None:
         slide.shapes.add_picture(str(logo_path), x, y, width=w)
 
 
-def add_right_tech_decor(slide, title: str = "TECH PANEL") -> None:
+def add_right_tech_decor(slide, panel_label: str = "TECH PANEL") -> None:
     panel = add_glass_card(slide, Inches(9.65), Inches(1.45), Inches(2.85), Inches(5.35), fill_color=RGBColor(0xF8, 0xFB, 0xFF), transparency=0.26)
     ptf = panel.text_frame
     ptf.clear()
     p = ptf.paragraphs[0]
-    p.text = title
+    p.text = panel_label
     set_para_style(p, 11, COLOR_SUBTEXT, align=PP_ALIGN.CENTER)
 
     frame = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(10.1), Inches(3.15), Inches(1.9), Inches(1.35))
@@ -677,23 +681,23 @@ def build_ppt(md_paths: list[Path], output_path: Path, logo_path: Path) -> None:
         for unit in split_section(sec):
             slide = prs.slides.add_slide(prs.slide_layouts[6])
             layout = select_layout(unit)
-            apply_theme(slide, prs, emphasize_texture=(layout == "C"))
-            if layout != "C":
+            apply_theme(slide, prs, emphasize_texture=(layout == LAYOUT_CHAPTER))
+            if layout != LAYOUT_CHAPTER:
                 add_title_block(slide, unit.title)
             if unit.table:
                 render_table_card(slide, unit.table, Inches(0.95), Inches(1.55), Inches(11.4), Inches(5.1))
             elif unit.code_block:
                 render_code_card(slide, unit.code_block, Inches(0.95), Inches(1.55), Inches(11.4), Inches(5.1))
-            elif layout == "B":
+            elif layout == LAYOUT_DOUBLE:
                 render_layout_b(slide, unit)
-            elif layout == "C":
+            elif layout == LAYOUT_CHAPTER:
                 render_layout_c(slide, unit)
-            elif layout == "D":
+            elif layout == LAYOUT_TIMELINE:
                 render_layout_d(slide, unit)
             else:
                 render_layout_a(slide, unit, logo_path)
 
-            if layout in {"B", "D"}:
+            if layout in {LAYOUT_DOUBLE, LAYOUT_TIMELINE}:
                 add_go_logo_if_needed(slide, unit, logo_path)
 
             add_footer(slide, prs, page_no)
