@@ -41,11 +41,19 @@ CHAPTER_KEYWORDS = ("总结", "感谢", "目录", "展望", "第", "功能")
 MARKDOWN_LANGUAGE_MARKERS = {"text", "yaml", "json", "sql", "go", "bash"}
 TECH_LAYOUT_KEYWORDS = ("架构", "技术", "部署", "实现")
 REFERENCE_PDF = "比赛用的最终ppt.pdf"
-GO_LOGO_PLACEMENT = (Inches(10.7), Inches(1.52), Inches(2.0))
+GO_LOGO_X = Inches(10.7)
+GO_LOGO_Y = Inches(1.52)
+GO_LOGO_WIDTH = Inches(2.0)
 LAYOUT_DEFAULT = "A"
 LAYOUT_DOUBLE = "B"
 LAYOUT_CHAPTER = "C"
 LAYOUT_TIMELINE = "D"
+TEXTURE_TRANSPARENCY_EMPHASIS = 0.89
+TEXTURE_TRANSPARENCY_DEFAULT = 0.94
+TEXTURE_DOT_TRANSPARENCY = 0.85
+TEXTURE_ARC_TRANSPARENCY = 0.86
+TEXTURE_DOTS_EMPHASIS = [(8.55, 1.7), (9.1, 2.2), (10.35, 3.0), (11.2, 4.25)]
+TEXTURE_DOTS_DEFAULT = [(10.9, 3.15), (11.35, 3.7)]
 
 
 @dataclass
@@ -273,10 +281,10 @@ def add_hud_decor(slide) -> None:
 
 
 def add_background_texture(slide, emphasize: bool = False) -> None:
-    transparency = 0.89 if emphasize else 0.94
+    transparency = TEXTURE_TRANSPARENCY_EMPHASIS if emphasize else TEXTURE_TRANSPARENCY_DEFAULT
     h_lines = [Inches(1.9), Inches(3.25)] if emphasize else [Inches(4.75)]
     v_lines = [Inches(8.35), Inches(9.85)] if emphasize else [Inches(11.25)]
-    dots = [(8.55, 1.7), (9.1, 2.2), (10.35, 3.0), (11.2, 4.25)] if emphasize else [(10.9, 3.15), (11.35, 3.7)]
+    dots = TEXTURE_DOTS_EMPHASIS if emphasize else TEXTURE_DOTS_DEFAULT
 
     for y in h_lines:
         line = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(1.0), y, Inches(6.3), Inches(0.01))
@@ -296,14 +304,14 @@ def add_background_texture(slide, emphasize: bool = False) -> None:
         dot = slide.shapes.add_shape(MSO_SHAPE.OVAL, Inches(x), Inches(y), Inches(0.05), Inches(0.05))
         dot.fill.solid()
         dot.fill.fore_color.rgb = COLOR_DECOR
-        dot.fill.transparency = 0.85
+        dot.fill.transparency = TEXTURE_DOT_TRANSPARENCY
         dot.line.fill.background()
 
     arc = slide.shapes.add_shape(MSO_SHAPE.ARC, Inches(10.55), Inches(4.45), Inches(1.65), Inches(1.1))
     arc.fill.background()
     arc.line.color.rgb = COLOR_DECOR
     arc.line.width = Pt(1)
-    arc.line.transparency = 0.86
+    arc.line.transparency = TEXTURE_ARC_TRANSPARENCY
 
 
 def add_title_block(slide, title: str) -> None:
@@ -465,8 +473,7 @@ def render_code_card(slide, code_lines: list[str], x, y, w, h) -> None:
 
 def add_go_logo_if_needed(slide, unit: SlideUnit, logo_path: Path) -> None:
     if need_go_logo(unit) and logo_path.exists():
-        x, y, w = GO_LOGO_PLACEMENT
-        slide.shapes.add_picture(str(logo_path), x, y, width=w)
+        slide.shapes.add_picture(str(logo_path), GO_LOGO_X, GO_LOGO_Y, width=GO_LOGO_WIDTH)
 
 
 def add_right_tech_decor(slide, panel_label: str = "技术面板") -> None:
