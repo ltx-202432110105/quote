@@ -324,8 +324,11 @@ def extract_tech_keywords(unit: SlideUnit) -> list[str]:
     tags: list[str] = []
     for kw in TECH_KEYWORD_ICON_MAP:
         if kw in text and kw not in tags:
-            tags.append(kw.upper().replace("GO-ZERO", "GO-ZERO"))
-    return [t.replace("POSTGRES", "POSTGRESQL") for t in tags[:2]]
+            if kw == "postgres":
+                tags.append("POSTGRESQL")
+            else:
+                tags.append(kw.upper())
+    return tags[:2]
 
 
 def resolve_backgrounds() -> list[Path]:
@@ -835,7 +838,7 @@ def add_cover(prs: Presentation, title: str, subtitle: str, logo_path: Path, bac
     p3.text = f"赛道\n{TRACK_NAME}"
     set_para_style(p3, 12, COLOR_SUBTEXT)
 
-    cover_unit = SlideUnit(title=title, bullets=[subtitle, "Go MySQL Redis GitHub"])
+    cover_unit = SlideUnit(title=title, bullets=[subtitle, "Go Docker MySQL Redis Kubernetes PostgreSQL Nginx GitHub"])
     add_right_tech_panel(slide, cover_unit, panel_label="COVER / TECH")
 
     if logo_path.exists():
