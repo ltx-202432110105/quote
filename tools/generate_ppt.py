@@ -469,7 +469,7 @@ def add_go_logo_if_needed(slide, unit: SlideUnit, logo_path: Path) -> None:
         slide.shapes.add_picture(str(logo_path), x, y, width=w)
 
 
-def add_right_tech_decor(slide, panel_label: str = "TECH PANEL") -> None:
+def add_right_tech_decor(slide, panel_label: str = "技术面板") -> None:
     panel = add_glass_card(slide, Inches(9.65), Inches(1.45), Inches(2.85), Inches(5.35), fill_color=RGBColor(0xF8, 0xFB, 0xFF), transparency=0.26)
     ptf = panel.text_frame
     ptf.clear()
@@ -524,9 +524,9 @@ def render_layout_b(slide, unit: SlideUnit) -> None:
 
 def render_layout_c(slide, unit: SlideUnit) -> None:
     badge_text = "CHAPTER"
-    match = re.search(r"第\s*(\d+)\s*页", unit.title)
-    if match:
-        badge_text = f"PAGE {match.group(1)}"
+    page_match = re.search(r"第\s*(\d+)\s*(页|章)", unit.title)
+    if page_match:
+        badge_text = f"PAGE {page_match.group(1)}"
 
     badge = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.95), Inches(1.78), Inches(2.05), Inches(0.56))
     badge.fill.solid()
