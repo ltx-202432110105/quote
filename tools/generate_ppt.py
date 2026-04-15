@@ -80,6 +80,7 @@ TECH_LAYOUT_KEYWORDS = ("架构", "技术", "部署", "实现")
 REFERENCE_PDF = "比赛用的最终ppt.pdf"
 BACKGROUND_GLOB = "assets/backgrounds/*"
 ICONS_DIR = Path("assets/icons")
+COVER_TECH_COUNT = 4
 GO_LOGO_X = Inches(10.7)
 GO_LOGO_Y = Inches(1.52)
 GO_LOGO_WIDTH = Inches(2.0)
@@ -851,7 +852,7 @@ def add_cover(prs: Presentation, title: str, subtitle: str, logo_path: Path, bac
     p3.text = f"赛道\n{TRACK_NAME}"
     set_para_style(p3, 12, COLOR_SUBTEXT)
 
-    cover_tech = " / ".join(list(ICON_DISPLAY_NAMES.values())[:4])
+    cover_tech = " / ".join(list(ICON_DISPLAY_NAMES.values())[:COVER_TECH_COUNT])
     cover_unit = SlideUnit(title=title, bullets=[subtitle, cover_tech])
     add_right_tech_panel(slide, cover_unit, panel_label="COVER / TECH")
 
@@ -927,11 +928,11 @@ def build_padding_units() -> list[SlideUnit]:
     """Return fallback design slides used to pad content to the target page count."""
     # These fallback templates are defaults for this competition deck and should be customized per project.
     return [
-        SlideUnit(title="关键亮点与创新", bullets=["智能评估链路闭环", "岗位匹配准确率提升", "全链路可解释反馈", "多模型融合增强鲁棒性"], layout_hint=LAYOUT_DEFAULT),
-        SlideUnit(title="系统架构总览", bullets=["接入层：Web/API 网关", "服务层：画像/推荐/评估引擎", "数据层：MySQL + Redis + 向量检索", "治理层：监控告警与审计追踪"], layout_hint=LAYOUT_TIMELINE),
-        SlideUnit(title="技术栈设计", bullets=["服务层采用主流后端框架", "数据层采用数据库与缓存组合", "容器化与编排提升交付效率", "网关与协作平台保障稳定迭代"], layout_hint=LAYOUT_DOUBLE),
-        SlideUnit(title="部署与运维", bullets=["容器化发布与灰度策略", "可观测：日志/指标/链路追踪", "自动扩缩容与资源治理", "安全策略与数据备份"], layout_hint=LAYOUT_DEFAULT),
-        SlideUnit(title="演示流程", bullets=["登录与身份校验", "岗位画像生成", "智能问卷评估", "报告实时流式输出"], layout_hint=LAYOUT_TIMELINE),
+        SlideUnit(title="关键亮点与创新", bullets=["（可按项目替换）智能评估链路闭环", "（可按项目替换）岗位匹配准确率提升", "（可按项目替换）全链路可解释反馈", "（可按项目替换）多模型融合增强鲁棒性"], layout_hint=LAYOUT_DEFAULT),
+        SlideUnit(title="系统架构总览", bullets=["（可按项目替换）接入层与网关", "（可按项目替换）核心服务引擎", "（可按项目替换）数据层与缓存层", "（可按项目替换）监控与治理体系"], layout_hint=LAYOUT_TIMELINE),
+        SlideUnit(title="技术栈设计", bullets=["（可按项目替换）后端与接口框架", "（可按项目替换）数据库与缓存组件", "（可按项目替换）容器化与编排能力", "（可按项目替换）协作与交付平台"], layout_hint=LAYOUT_DOUBLE),
+        SlideUnit(title="部署与运维", bullets=["（可按项目替换）发布与灰度策略", "（可按项目替换）日志指标链路追踪", "（可按项目替换）弹性扩缩容治理", "（可按项目替换）安全与备份方案"], layout_hint=LAYOUT_DEFAULT),
+        SlideUnit(title="演示流程", bullets=["（可按项目替换）入口与鉴权", "（可按项目替换）核心处理流程", "（可按项目替换）结果反馈流程", "（可按项目替换）展示与收尾"], layout_hint=LAYOUT_TIMELINE),
     ]
 
 
