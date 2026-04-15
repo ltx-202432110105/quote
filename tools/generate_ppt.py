@@ -85,6 +85,10 @@ REFERENCE_PDF = "比赛用的最终ppt.pdf"
 BACKGROUND_GLOB = "assets/backgrounds/*"
 ICONS_DIR = Path("assets/icons")
 COVER_TECH_COUNT = 4
+BACKGROUND_LAYOUT_RIGHT = "right"
+BACKGROUND_LAYOUT_FULL = "full"
+BACKGROUND_LAYOUT_DIAGONAL = "diagonal"
+BACKGROUND_LAYOUTS = (BACKGROUND_LAYOUT_RIGHT, BACKGROUND_LAYOUT_FULL, BACKGROUND_LAYOUT_DIAGONAL)
 GO_LOGO_X = Inches(10.7)
 GO_LOGO_Y = Inches(1.52)
 GO_LOGO_WIDTH = Inches(2.0)
@@ -354,18 +358,54 @@ def pick_background(backgrounds: list[Path], index: int) -> Path | None:
     return backgrounds[index % len(backgrounds)]
 
 
-def apply_theme(slide, prs: Presentation, background_path: Path | None = None, emphasize_texture: bool = False) -> None:
-    bg = slide.background.fill
-    bg.solid()
-    bg.fore_color.rgb = COLOR_BG
+def pick_background_layout(index: int) -> str:
+    return BACKGROUND_LAYOUTS[index % len(BACKGROUND_LAYOUTS)]
 
-    if background_path and background_path.exists():
+
+def add_background_hero(slide, prs: Presentation, background_path: Path | None, layout: str) -> None:
+    if not background_path or not background_path.exists():
+        return
+
+    if layout == BACKGROUND_LAYOUT_RIGHT:
+        slide.shapes.add_picture(str(background_path), Inches(8.55), Inches(0), width=Inches(4.78), height=prs.slide_height)
+        veil = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(8.42), Inches(0), Inches(4.95), prs.slide_height)
+        veil.fill.solid()
+        veil.fill.fore_color.rgb = COLOR_WHITE
+        veil.fill.transparency = 0.22
+        veil.line.fill.background()
+    elif layout == BACKGROUND_LAYOUT_DIAGONAL:
+        slide.shapes.add_picture(str(background_path), Inches(5.2), Inches(0), width=Inches(8.15), height=prs.slide_height)
+        cut = slide.shapes.add_shape(MSO_SHAPE.CHEVRON, Inches(4.85), Inches(0.05), Inches(2.65), Inches(7.35))
+        cut.fill.solid()
+        cut.fill.fore_color.rgb = RGBColor(0xE6, 0xEE, 0xFA)
+        cut.fill.transparency = 0.12
+        cut.line.fill.background()
+        veil = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(5.1), Inches(0), Inches(8.25), prs.slide_height)
+        veil.fill.solid()
+        veil.fill.fore_color.rgb = COLOR_WHITE
+        veil.fill.transparency = 0.26
+        veil.line.fill.background()
+    else:
         slide.shapes.add_picture(str(background_path), Inches(0), Inches(0), width=prs.slide_width, height=prs.slide_height)
         veil = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0), Inches(0), prs.slide_width, prs.slide_height)
         veil.fill.solid()
         veil.fill.fore_color.rgb = COLOR_WHITE
-        veil.fill.transparency = 0.2
+        veil.fill.transparency = 0.28
         veil.line.fill.background()
+
+
+def apply_theme(
+    slide,
+    prs: Presentation,
+    background_path: Path | None = None,
+    background_layout: str = BACKGROUND_LAYOUT_RIGHT,
+    emphasize_texture: bool = False,
+) -> None:
+    bg = slide.background.fill
+    bg.solid()
+    bg.fore_color.rgb = COLOR_BG
+
+    add_background_hero(slide, prs, background_path, background_layout)
 
     glow = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0), Inches(0), prs.slide_width, prs.slide_height)
     glow.fill.solid()
@@ -812,9 +852,16 @@ def render_layout_d(slide, unit: SlideUnit) -> None:
             arrow.line.fill.background()
 
 
-def add_cover(prs: Presentation, title: str, subtitle: str, logo_path: Path, background_path: Path | None = None) -> None:
+def add_cover(
+    prs: Presentation,
+    title: str,
+    subtitle: str,
+    logo_path: Path,
+    background_path: Path | None = None,
+    background_layout: str = BACKGROUND_LAYOUT_FULL,
+) -> None:
     slide = prs.slides.add_slide(prs.slide_layouts[6])
-    apply_theme(slide, prs, background_path=background_path, emphasize_texture=True)
+    apply_theme(slide, prs, background_path=background_path, background_layout=background_layout, emphasize_texture=True)
 
     hero = add_glass_card(slide, Inches(0.95), Inches(1.2), Inches(11.4), Inches(5.25), fill_color=COLOR_WHITE, transparency=0.16)
     hero.line.color.rgb = RGBColor(0xD7, 0xE0, 0xEF)
@@ -976,7 +1023,7 @@ def build_ppt(md_paths: list[Path], output_path: Path, logo_path: Path) -> None:
 
     title, subtitle = extract_cover(sections)
     cover_bg = pick_background(backgrounds, 0)
-    add_cover(prs, title, subtitle, logo_path, background_path=cover_bg)
+    add_cover(prs, title, subtitle, logo_path, background_path=cover_bg, background_layout=BACKGROUND_LAYOUT_FULL)
 
     content_units = build_content_units(sections)
     page_no = 1
@@ -984,7 +1031,8 @@ def build_ppt(md_paths: list[Path], output_path: Path, logo_path: Path) -> None:
         slide = prs.slides.add_slide(prs.slide_layouts[6])
         layout = select_layout(unit)
         bg = pick_background(backgrounds, idx)
-        apply_theme(slide, prs, background_path=bg, emphasize_texture=(layout == LAYOUT_CHAPTER))
+        bg_layout = pick_background_layout(idx)
+        apply_theme(slide, prs, background_path=bg, background_layout=bg_layout, emphasize_texture=(layout == LAYOUT_CHAPTER))
         if layout not in {LAYOUT_CHAPTER, LAYOUT_AGENDA}:
             add_title_block(slide, unit.title)
         if unit.table:
