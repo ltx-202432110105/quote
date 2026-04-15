@@ -73,6 +73,10 @@ ICON_DISPLAY_NAMES = {
     "nginx": "NGINX",
     "github": "GITHUB",
 }
+DEFAULT_PANEL_TAGS = ["GO + GIN", "MYSQL + REDIS"]
+COVER_TECH_ORDER = ["GO", "DOCKER", "MYSQL", "REDIS", "K8S", "POSTGRESQL", "NGINX", "GITHUB"]
+SUMMARY_BULLETS = ["实现职业规划核心链路闭环", "强化推荐质量与可解释反馈", "下一步推进多模型协同优化"]
+QA_BULLETS = ["期待专家指导与建议", "交流：技术方案与落地实践", f"队伍：{TEAM_NAME}"]
 PROCESS_KEYWORDS = ("流程", "步骤", "阶段", "演进", "架构")
 CHAPTER_KEYWORDS = ("总结", "感谢", "目录", "展望", "第", "功能")
 MARKDOWN_LANGUAGE_MARKERS = {"text", "yaml", "json", "sql", "go", "bash"}
@@ -649,7 +653,7 @@ def add_right_tech_panel(slide, unit: SlideUnit, panel_label: str = "TECH PANEL"
         line.fill.transparency = 0.84
         line.line.fill.background()
 
-    tech_tags = extract_tech_keywords(unit) or ["GO + GIN", "MYSQL + REDIS"]
+    tech_tags = extract_tech_keywords(unit) or DEFAULT_PANEL_TAGS
     for idx, txt in enumerate(tech_tags[:2]):
         t = slide.shapes.add_textbox(Inches(9.95), Inches(4.8 + idx * 0.34), Inches(2.3), Inches(0.2))
         tf = t.text_frame
@@ -852,7 +856,7 @@ def add_cover(prs: Presentation, title: str, subtitle: str, logo_path: Path, bac
     p3.text = f"赛道\n{TRACK_NAME}"
     set_para_style(p3, 12, COLOR_SUBTEXT)
 
-    cover_tech = " / ".join(list(ICON_DISPLAY_NAMES.values())[:COVER_TECH_COUNT])
+    cover_tech = " / ".join(COVER_TECH_ORDER[:COVER_TECH_COUNT])
     cover_unit = SlideUnit(title=title, bullets=[subtitle, cover_tech])
     add_right_tech_panel(slide, cover_unit, panel_label="COVER / TECH")
 
@@ -955,8 +959,8 @@ def build_content_units(sections: list[Section]) -> list[SlideUnit]:
     body_units = merge_units_for_limit(raw_units, body_target)[:body_target]
     content: list[SlideUnit] = [build_agenda_unit(body_units)]
     content.extend(body_units)
-    content.append(SlideUnit(title=SUMMARY_TITLE, bullets=["实现职业规划核心链路闭环", "强化推荐质量与可解释反馈", "下一步推进多模型协同优化"], layout_hint=LAYOUT_CHAPTER, is_transition=True))
-    content.append(SlideUnit(title="Q&A / 感谢", bullets=["期待专家指导与建议", "交流：技术方案与落地实践", f"队伍：{TEAM_NAME}"], layout_hint=LAYOUT_CHAPTER, is_transition=True))
+    content.append(SlideUnit(title=SUMMARY_TITLE, bullets=SUMMARY_BULLETS, layout_hint=LAYOUT_CHAPTER, is_transition=True))
+    content.append(SlideUnit(title="Q&A / 感谢", bullets=QA_BULLETS, layout_hint=LAYOUT_CHAPTER, is_transition=True))
     return content[:TARGET_CONTENT_SLIDES]
 
 
