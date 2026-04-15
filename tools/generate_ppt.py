@@ -24,11 +24,14 @@ TEXT_COLOR = RGBColor(0x11, 0x18, 0x27)
 SUBTEXT_COLOR = RGBColor(0x4B, 0x55, 0x63)
 LINE_COLOR = RGBColor(0xAA, 0xB4, 0xC3)
 
+# 队伍名称按题目要求写入，可按需替换为实际队名。
 TEAM_NAME_FROM_BRIEF = "我们叫什么名字"
 SCHOOL_NAME = "浙江师范大学"
 TRACK_NAME = "A类"
+# Markdown 中用于标注代码块语言类型的行，不作为正文要点渲染。
 SKIP_LANGUAGE_MARKERS = {"text", "yaml", "json", "sql", "go", "bash"}
 GO_ICON_KEYWORDS = ("技术栈", "实现", "部署", "架构", "go", "系统架构", "运维")
+MAX_BULLETS_PER_SLIDE = 8
 
 
 @dataclass
@@ -97,7 +100,7 @@ def normalize_lines_to_bullets(lines: Iterable[str]) -> list[str]:
         seen.add(bullet)
         compact.append(bullet)
 
-    return compact[:8]
+    return compact[:MAX_BULLETS_PER_SLIDE]
 
 
 def apply_background(slide, prs: Presentation) -> None:
@@ -242,7 +245,7 @@ def add_content_slide(prs: Presentation, section: Section, page_no: int) -> None
     btf.word_wrap = True
     btf.clear()
 
-    for i, line in enumerate(section.lines[:8]):
+    for i, line in enumerate(section.lines[:MAX_BULLETS_PER_SLIDE]):
         para = btf.paragraphs[0] if i == 0 else btf.add_paragraph()
         para.text = line
         set_text_style(para, 16 if i == 0 else 15, TEXT_COLOR if i < 2 else SUBTEXT_COLOR, level=0)
