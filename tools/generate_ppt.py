@@ -200,6 +200,7 @@ def chunk_bullets(bullets: list[str], chunk_size: int) -> list[list[str]]:
 
 
 def shorten_title(title: str, max_len: int = 18) -> str:
+    """Normalize a section title into concise PPT-friendly text with length cap."""
     t = cleanup_text(title).replace("：", " ").replace("—", " ")
     t = re.sub(r"^第\s*\d+\s*页\s*[-—:：]?\s*", "", t)
     t = re.sub(r"（\d+/\d+）", "", t)
@@ -210,6 +211,7 @@ def shorten_title(title: str, max_len: int = 18) -> str:
 
 
 def summarize_bullets(bullets: list[str], max_items: int = MAX_BULLETS_PER_SLIDE) -> list[str]:
+    """Limit bullet count to max_items and append an overflow summary note when needed."""
     cleaned = [cleanup_text(x) for x in bullets if cleanup_text(x)]
     if not cleaned:
         return ["核心内容待补充"]
@@ -782,11 +784,24 @@ def extract_cover(sections: list[Section]) -> tuple[str, str]:
     return title, subtitle
 
 
+def normalize_unit(unit: SlideUnit) -> SlideUnit:
+    """Create a compact unit with shortened title and bounded bullets for slide rendering."""
+    return SlideUnit(
+        title=shorten_title(unit.title, max_len=18),
+        bullets=summarize_bullets(unit.bullets),
+        table=unit.table,
+        code_block=unit.code_block,
+        is_transition=unit.is_transition,
+        layout_hint=unit.layout_hint,
+    )
+
+
 def merge_units_for_limit(units: list[SlideUnit], target: int) -> list[SlideUnit]:
+    """Merge adjacent low-complexity units until the unit count reaches target."""
     merged = list(units)
     while len(merged) > target and len(merged) >= 2:
         best_idx = 0
-        best_score = 10**9
+        best_score = float("inf")
         for i in range(len(merged) - 1):
             score = len(merged[i].bullets) + len(merged[i + 1].bullets)
             if merged[i].table or merged[i + 1].table:
@@ -813,6 +828,7 @@ def merge_units_for_limit(units: list[SlideUnit], target: int) -> list[SlideUnit
 
 
 def build_agenda_unit(units: list[SlideUnit]) -> SlideUnit:
+    """Build a fixed agenda slide from the first key unit titles."""
     agenda_items = [shorten_title(u.title, max_len=20) for u in units[:8]]
     if len(units) > 8:
         agenda_items[-1] = "总结与展望"
@@ -820,6 +836,7 @@ def build_agenda_unit(units: list[SlideUnit]) -> SlideUnit:
 
 
 def build_padding_units() -> list[SlideUnit]:
+    """Return fallback design slides used to pad content to the target page count."""
     return [
         SlideUnit(title="关键亮点", bullets=["智能评估链路闭环", "岗位匹配准确率提升", "全链路可解释反馈", "多模型融合增强鲁棒性"], layout_hint=LAYOUT_DEFAULT),
         SlideUnit(title="系统架构总览", bullets=["接入层：Web/API 网关", "服务层：画像/推荐/评估引擎", "数据层：MySQL + Redis + 向量检索", "治理层：监控告警与审计追踪"], layout_hint=LAYOUT_TIMELINE),
@@ -830,10 +847,11 @@ def build_padding_units() -> list[SlideUnit]:
 
 
 def build_content_units(sections: list[Section]) -> list[SlideUnit]:
+    """Build exactly TARGET_CONTENT_SLIDES content units via normalize/merge/pad steps."""
     raw_units: list[SlideUnit] = []
     for sec in sections:
         raw_units.extend(split_section(sec))
-    raw_units = [SlideUnit(title=shorten_title(u.title, max_len=18), bullets=summarize_bullets(u.bullets), table=u.table, code_block=u.code_block, is_transition=u.is_transition, layout_hint=u.layout_hint) for u in raw_units]
+    raw_units = [normalize_unit(u) for u in raw_units]
     raw_units = merge_units_for_limit(raw_units, TARGET_CONTENT_SLIDES - 1)
 
     content: list[SlideUnit] = [build_agenda_unit(raw_units)]
