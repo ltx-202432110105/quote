@@ -225,7 +225,8 @@ def summarize_bullets(bullets: list[str], max_items: int = MAX_BULLETS_PER_SLIDE
     if len(cleaned) <= max_items:
         return cleaned
     summarized = cleaned[:max_items - 1]
-    summarized.append(f"其余 {len(cleaned) - (max_items - 1)} 项已整合到现场讲解")
+    overflow_count = len(cleaned) - (max_items - 1)
+    summarized.append(f"其余 {overflow_count} 项已整合到现场讲解")
     return summarized
 
 
@@ -844,7 +845,7 @@ def build_agenda_unit(units: list[SlideUnit]) -> SlideUnit:
 
 def build_padding_units() -> list[SlideUnit]:
     """Return fallback design slides used to pad content to the target page count."""
-    # These fallback slide templates are intentionally generic and can be customized per project.
+    # These fallback templates are defaults for this competition deck and can be customized per project.
     return [
         SlideUnit(title="关键亮点", bullets=["智能评估链路闭环", "岗位匹配准确率提升", "全链路可解释反馈", "多模型融合增强鲁棒性"], layout_hint=LAYOUT_DEFAULT),
         SlideUnit(title="系统架构总览", bullets=["接入层：Web/API 网关", "服务层：画像/推荐/评估引擎", "数据层：MySQL + Redis + 向量检索", "治理层：监控告警与审计追踪"], layout_hint=LAYOUT_TIMELINE),
@@ -860,6 +861,7 @@ def build_content_units(sections: list[Section]) -> list[SlideUnit]:
     for sec in sections:
         raw_units.extend(split_section(sec))
     raw_units = [normalize_unit(u) for u in raw_units]
+    # Reserve one content slot for the fixed agenda slide.
     raw_units = merge_units_for_limit(raw_units, TARGET_CONTENT_SLIDES - 1)
 
     content: list[SlideUnit] = [build_agenda_unit(raw_units)]
@@ -868,6 +870,7 @@ def build_content_units(sections: list[Section]) -> list[SlideUnit]:
     pads = build_padding_units()
     pad_idx = 0
     while len(content) < TARGET_CONTENT_SLIDES:
+        # Cycle fallback templates when multiple pad pages are required.
         content.append(pads[pad_idx % len(pads)])
         pad_idx += 1
 
