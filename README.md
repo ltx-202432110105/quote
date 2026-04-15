@@ -4,14 +4,16 @@
 
 ## 输入来源
 
-- Markdown 内容源：`/home/runner/work/quote/quote/CareerPlanner — 基于 AI 的大学生职业规划智能体.md`
-- 风格参考 PDF：`/home/runner/work/quote/quote/比赛用的最终ppt.pdf`
+- Markdown 内容源：`CareerPlanner — 基于 AI 的大学生职业规划智能体.md`
+- 风格参考 PDF：`比赛用的最终ppt.pdf`
 
 ## 基础信息（已写入封面与页脚）
 
 - 队伍名称：我们叫什么名字
 - 所属学校：浙江师范大学
 - 参赛赛道：A类
+
+> 注：队伍名称使用题目给定值，如需替换可修改 `tools/generate_ppt.py` 顶部常量。
 
 ## 安装依赖
 
@@ -33,7 +35,7 @@ python tools/generate_ppt.py --inputs "*.md" "docs/**/*.md" --output slides/comp
 
 ## 输出文件
 
-- PPT 输出路径：`/home/runner/work/quote/quote/slides/competition.pptx`
+- PPT 输出路径：`slides/competition.pptx`
 
 ## 风格说明
 

@@ -27,6 +27,8 @@ LINE_COLOR = RGBColor(0xAA, 0xB4, 0xC3)
 TEAM_NAME = "我们叫什么名字"
 SCHOOL_NAME = "浙江师范大学"
 TRACK_NAME = "A类"
+SKIP_LANGUAGE_MARKERS = {"text", "yaml", "json", "sql", "go", "bash"}
+GO_ICON_KEYWORDS = ("技术栈", "实现", "部署", "架构", "go", "系统架构", "运维")
 
 
 @dataclass
@@ -61,7 +63,7 @@ def normalize_lines_to_bullets(lines: Iterable[str]) -> list[str]:
             continue
         if not line or line == "---":
             continue
-        if line.lower() in {"text", "yaml", "json", "sql", "go", "bash"}:
+        if line.lower() in SKIP_LANGUAGE_MARKERS:
             continue
         if in_code:
             cleaned = line.strip("` ")
@@ -216,8 +218,7 @@ def add_cover_slide(prs: Presentation, title: str, subtitle: str) -> None:
 
 def should_add_go_icon(title: str, lines: list[str]) -> bool:
     text = f"{title} {' '.join(lines)}".lower()
-    keywords = ["技术栈", "实现", "部署", "架构", "go", "系统架构", "运维"]
-    return any(k in text for k in keywords)
+    return any(k in text for k in GO_ICON_KEYWORDS)
 
 
 def add_content_slide(prs: Presentation, section: Section, page_no: int) -> None:
