@@ -24,8 +24,11 @@ TEXT_COLOR = RGBColor(0x11, 0x18, 0x27)
 SUBTEXT_COLOR = RGBColor(0x4B, 0x55, 0x63)
 LINE_COLOR = RGBColor(0xAA, 0xB4, 0xC3)
 
-# 队伍名称按题目要求写入，可按需替换为实际队名。
-DEFAULT_TEAM_NAME = "我们叫什么名字"
+TEAM_LABEL = "队伍"
+SCHOOL_LABEL = "学校"
+TRACK_LABEL = "赛道"
+# 题目提供的默认队伍名称文本，可按需替换为真实队名。
+PLACEHOLDER_TEAM_NAME = "我们叫什么名字"
 SCHOOL_NAME = "浙江师范大学"
 TRACK_NAME = "A类"
 # Markdown 中用于标注代码块语言类型的行，不作为正文要点渲染。
@@ -147,7 +150,7 @@ def add_footer(slide, prs: Presentation, page_no: int) -> None:
     tf = box.text_frame
     tf.clear()
     p = tf.paragraphs[0]
-    p.text = f"队伍：{DEFAULT_TEAM_NAME}    学校：{SCHOOL_NAME}    赛道：{TRACK_NAME}"
+    p.text = f"{TEAM_LABEL}：{PLACEHOLDER_TEAM_NAME}    {SCHOOL_LABEL}：{SCHOOL_NAME}    {TRACK_LABEL}：{TRACK_NAME}"
     set_text_style(p, 10, SUBTEXT_COLOR)
     p.alignment = PP_ALIGN.LEFT
 
@@ -208,7 +211,7 @@ def add_cover_slide(prs: Presentation, title: str, subtitle: str) -> None:
     itf.clear()
 
     p3 = itf.paragraphs[0]
-    p3.text = f"队伍名称：{DEFAULT_TEAM_NAME}"
+    p3.text = f"队伍名称：{PLACEHOLDER_TEAM_NAME}"
     set_text_style(p3, 16, TEXT_COLOR, bold=True)
 
     for text in [f"所属学校：{SCHOOL_NAME}", f"参赛赛道：{TRACK_NAME}"]:
@@ -299,6 +302,7 @@ def resolve_markdowns(patterns: list[str]) -> list[Path]:
         for path in glob.glob(pat):
             p = Path(path)
             if p.suffix.lower() == ".md" and p.is_file():
+                # README 常用于说明文档，默认不作为按页汇报内容源。
                 if p.name.lower() == "readme.md":
                     continue
                 result.append(p)
