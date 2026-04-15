@@ -33,6 +33,8 @@ MAX_BULLETS_PER_SLIDE = 8
 GO_KEYWORDS = ("go", "golang", "gin", "grpc", "编译", "go语言")
 PROCESS_KEYWORDS = ("流程", "步骤", "阶段", "演进", "架构")
 CHAPTER_KEYWORDS = ("总结", "感谢", "目录", "展望", "第", "功能")
+MARKDOWN_LANGUAGE_MARKERS = {"text", "yaml", "json", "sql", "go", "bash"}
+REFERENCE_PDF = "比赛用的最终ppt.pdf"
 
 
 @dataclass
@@ -88,7 +90,7 @@ def parse_markdown_sections(path: Path) -> list[Section]:
             line = lines[i].rstrip()
             stripped = line.strip()
 
-            if not stripped or stripped == "---" or stripped.lower() in {"text", "yaml", "json", "sql", "go", "bash"}:
+            if not stripped or stripped == "---" or stripped.lower() in MARKDOWN_LANGUAGE_MARKERS:
                 i += 1
                 continue
 
@@ -172,7 +174,7 @@ def split_section(section: Section) -> list[SlideUnit]:
     units: list[SlideUnit] = []
 
     if section.bullets:
-        chunks = [section.bullets[i : i + MAX_BULLETS_PER_SLIDE] for i in range(0, len(section.bullets), MAX_BULLETS_PER_SLIDE)]
+        chunks = [section.bullets[i:i + MAX_BULLETS_PER_SLIDE] for i in range(0, len(section.bullets), MAX_BULLETS_PER_SLIDE)]
         total = len(chunks)
         for idx, chunk in enumerate(chunks, start=1):
             title = section.title
@@ -628,7 +630,7 @@ def main() -> None:
     print("Markdown sources:")
     for md in md_paths:
         print(f"- {md}")
-    print(f"Reference PDF: 比赛用的最终ppt.pdf")
+    print(f"Reference PDF: {REFERENCE_PDF}")
     print(f"Go logo: {go_logo}")
     print(f"Output PPTX: {output}")
 
