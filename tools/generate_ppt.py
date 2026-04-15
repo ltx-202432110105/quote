@@ -25,7 +25,7 @@ SUBTEXT_COLOR = RGBColor(0x4B, 0x55, 0x63)
 LINE_COLOR = RGBColor(0xAA, 0xB4, 0xC3)
 
 # 队伍名称按题目要求写入，可按需替换为实际队名。
-TEAM_NAME_FROM_BRIEF = "我们叫什么名字"
+DEFAULT_TEAM_NAME = "我们叫什么名字"
 SCHOOL_NAME = "浙江师范大学"
 TRACK_NAME = "A类"
 # Markdown 中用于标注代码块语言类型的行，不作为正文要点渲染。
@@ -147,7 +147,7 @@ def add_footer(slide, prs: Presentation, page_no: int) -> None:
     tf = box.text_frame
     tf.clear()
     p = tf.paragraphs[0]
-    p.text = f"队伍：{TEAM_NAME_FROM_BRIEF}    学校：{SCHOOL_NAME}    赛道：{TRACK_NAME}"
+    p.text = f"队伍：{DEFAULT_TEAM_NAME}    学校：{SCHOOL_NAME}    赛道：{TRACK_NAME}"
     set_text_style(p, 10, SUBTEXT_COLOR)
     p.alignment = PP_ALIGN.LEFT
 
@@ -208,7 +208,7 @@ def add_cover_slide(prs: Presentation, title: str, subtitle: str) -> None:
     itf.clear()
 
     p3 = itf.paragraphs[0]
-    p3.text = f"队伍名称：{TEAM_NAME_FROM_BRIEF}"
+    p3.text = f"队伍名称：{DEFAULT_TEAM_NAME}"
     set_text_style(p3, 16, TEXT_COLOR, bold=True)
 
     for text in [f"所属学校：{SCHOOL_NAME}", f"参赛赛道：{TRACK_NAME}"]:
@@ -304,7 +304,9 @@ def resolve_markdowns(patterns: list[str]) -> list[Path]:
                 result.append(p)
     result = sorted(set(result))
     if not result:
-        raise FileNotFoundError("No markdown files found. Please provide valid --inputs patterns.")
+        raise FileNotFoundError(
+            f"No markdown files found matching patterns: {patterns}. Please provide valid --inputs patterns."
+        )
     return result
 
 
