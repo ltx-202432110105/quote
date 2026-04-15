@@ -39,6 +39,9 @@ MAX_TABLE_ROWS = 6
 TARGET_TOTAL_SLIDES = 20
 TARGET_CONTENT_SLIDES = TARGET_TOTAL_SLIDES - 1
 MAX_AGENDA_ITEMS = 8
+AGENDA_HIGHLIGHT_COUNT = 3
+TITLE_LEN_NORMAL = 18
+SUMMARY_TITLE = "总结与展望"
 MERGE_TABLE_PENALTY = 4
 MERGE_CODE_PENALTY = 4
 PLACEHOLDER_BULLET = "待补充内容"
@@ -203,7 +206,7 @@ def chunk_bullets(bullets: list[str], chunk_size: int) -> list[list[str]]:
     return [bullets[i:i + chunk_size] for i in range(0, len(bullets), chunk_size)]
 
 
-def normalize_and_shorten_title(title: str, max_len: int = 18) -> str:
+def normalize_and_shorten_title(title: str, max_len: int = TITLE_LEN_NORMAL) -> str:
     """Normalize a section title into concise PPT-friendly text with length cap."""
     t = cleanup_text(title).replace("：", " ").replace("—", " ")
     t = re.sub(r"^第\s*\d+\s*页\s*[-—:：]?\s*", "", t)
@@ -620,7 +623,7 @@ def render_layout_e(slide, unit: SlideUnit) -> None:
     add_glass_card(slide, Inches(0.9), Inches(1.45), Inches(8.45), Inches(5.3), transparency=0.2)
     add_right_tech_panel(slide, panel_label="目录 / Agenda")
 
-    for idx, item in enumerate(unit.bullets[:8], start=1):
+    for idx, item in enumerate(unit.bullets[:MAX_AGENDA_ITEMS], start=1):
         y = Inches(1.8 + (idx - 1) * 0.58)
         badge = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(1.2), y, Inches(0.48), Inches(0.32))
         badge.fill.solid()
@@ -643,7 +646,7 @@ def render_layout_e(slide, unit: SlideUnit) -> None:
         tf.clear()
         p = tf.paragraphs[0]
         p.text = item
-        set_para_style(p, 15, COLOR_TEXT if idx <= 3 else COLOR_SUBTEXT)
+        set_para_style(p, 15, COLOR_TEXT if idx <= AGENDA_HIGHLIGHT_COUNT else COLOR_SUBTEXT)
 
 
 def render_layout_c(slide, unit: SlideUnit) -> None:
@@ -791,7 +794,7 @@ def extract_cover(sections: list[Section]) -> tuple[str, str]:
 def normalize_unit(unit: SlideUnit) -> SlideUnit:
     """Create a compact unit with shortened title and bounded bullets for slide rendering."""
     return SlideUnit(
-        title=normalize_and_shorten_title(unit.title, max_len=18),
+        title=normalize_and_shorten_title(unit.title, max_len=TITLE_LEN_NORMAL),
         bullets=summarize_bullets(unit.bullets),
         table=unit.table,
         code_block=unit.code_block,
@@ -835,7 +838,7 @@ def build_agenda_unit(units: list[SlideUnit]) -> SlideUnit:
     """Build a fixed agenda slide from the first key unit titles."""
     agenda_items = [normalize_and_shorten_title(u.title, max_len=20) for u in units[:MAX_AGENDA_ITEMS]]
     if len(units) > MAX_AGENDA_ITEMS:
-        agenda_items[-1] = "总结与展望"
+        agenda_items[-1] = SUMMARY_TITLE
     return SlideUnit(title="目录总览", bullets=agenda_items or ["项目概览", "系统设计", "技术实现", "总结展望"], layout_hint=LAYOUT_AGENDA)
 
 
@@ -847,7 +850,7 @@ def build_padding_units() -> list[SlideUnit]:
         SlideUnit(title="系统架构总览", bullets=["接入层：Web/API 网关", "服务层：画像/推荐/评估引擎", "数据层：MySQL + Redis + 向量检索", "治理层：监控告警与审计追踪"], layout_hint=LAYOUT_TIMELINE),
         SlideUnit(title="技术栈设计", bullets=["Go + Gin + gRPC 微服务", "MySQL / Redis / Elasticsearch", "Docker + CI/CD 自动化交付", "Prompt + RAG + 工具调用"], layout_hint=LAYOUT_DOUBLE),
         SlideUnit(title="部署与运维", bullets=["容器化发布与灰度策略", "可观测：日志/指标/链路追踪", "自动扩缩容与资源治理", "安全策略与数据备份"], layout_hint=LAYOUT_DEFAULT),
-        SlideUnit(title="总结与展望", bullets=["已实现从测评到推荐的完整闭环", "下一步引入实时行为强化学习", "持续提升推荐质量与可解释性"], layout_hint=LAYOUT_CHAPTER, is_transition=True),
+        SlideUnit(title=SUMMARY_TITLE, bullets=["已实现从测评到推荐的完整闭环", "下一步引入实时行为强化学习", "持续提升推荐质量与可解释性"], layout_hint=LAYOUT_CHAPTER, is_transition=True),
     ]
 
 
