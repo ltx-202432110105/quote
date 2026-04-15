@@ -33,9 +33,11 @@ TEAM_NAME = "我们叫什么名字"
 SCHOOL_NAME = "浙江师范大学"
 TRACK_NAME = "A类"
 
-MAX_BULLETS_PER_SLIDE = 8
-MAX_CODE_LINES = 10
+MAX_BULLETS_PER_SLIDE = 5
+MAX_CODE_LINES = 8
 MAX_TABLE_ROWS = 6
+TARGET_TOTAL_SLIDES = 20
+TARGET_CONTENT_SLIDES = TARGET_TOTAL_SLIDES - 1
 GO_KEYWORDS = ("go", "golang", "gin", "grpc", "编译", "go语言")
 PROCESS_KEYWORDS = ("流程", "步骤", "阶段", "演进", "架构")
 CHAPTER_KEYWORDS = ("总结", "感谢", "目录", "展望", "第", "功能")
@@ -49,6 +51,7 @@ LAYOUT_DEFAULT = "A"
 LAYOUT_DOUBLE = "B"
 LAYOUT_CHAPTER = "C"
 LAYOUT_TIMELINE = "D"
+LAYOUT_AGENDA = "E"
 TEXTURE_TRANSPARENCY_EMPHASIS = 0.89
 TEXTURE_TRANSPARENCY_DEFAULT = 0.94
 TEXTURE_DOT_TRANSPARENCY = 0.85
@@ -80,6 +83,7 @@ class SlideUnit:
     table: TableData | None = None
     code_block: list[str] | None = None
     is_transition: bool = False
+    layout_hint: str | None = None
 
 
 def set_para_style(paragraph, size: int, color: RGBColor, bold: bool = False, align: PP_ALIGN | None = None) -> None:
@@ -195,26 +199,49 @@ def chunk_bullets(bullets: list[str], chunk_size: int) -> list[list[str]]:
     return [bullets[i:i + chunk_size] for i in range(0, len(bullets), chunk_size)]
 
 
+def shorten_title(title: str, max_len: int = 18) -> str:
+    t = cleanup_text(title).replace("：", " ").replace("—", " ")
+    t = re.sub(r"^第\s*\d+\s*页\s*[-—:：]?\s*", "", t)
+    t = re.sub(r"（\d+/\d+）", "", t)
+    t = re.sub(r"\s+", " ", t).strip()
+    if len(t) <= max_len:
+        return t
+    return f"{t[:max_len].rstrip()}…"
+
+
+def summarize_bullets(bullets: list[str], max_items: int = MAX_BULLETS_PER_SLIDE) -> list[str]:
+    cleaned = [cleanup_text(x) for x in bullets if cleanup_text(x)]
+    if not cleaned:
+        return ["核心内容待补充"]
+    if len(cleaned) <= max_items:
+        return cleaned
+    summarized = cleaned[:max_items - 1]
+    summarized.append(f"其余 {len(cleaned) - (max_items - 1)} 项已整合到现场讲解")
+    return summarized
+
+
 def split_section(section: Section) -> list[SlideUnit]:
     units: list[SlideUnit] = []
+    title = shorten_title(section.title, max_len=22)
 
     if section.bullets:
         chunks = chunk_bullets(section.bullets, MAX_BULLETS_PER_SLIDE)
         total = len(chunks)
         for idx, chunk in enumerate(chunks, start=1):
-            title = section.title
             if len(section.bullets) > MAX_BULLETS_PER_SLIDE and total > 1:
-                title = f"{section.title}（{idx}/{total}）"
-            units.append(SlideUnit(title=title, bullets=chunk))
+                chunk_title = f"{title}（{idx}/{total}）"
+            else:
+                chunk_title = title
+            units.append(SlideUnit(title=chunk_title, bullets=summarize_bullets(chunk)))
 
     if not section.bullets and not section.tables and not section.code_blocks:
-        units.append(SlideUnit(title=section.title, bullets=["待补充内容"]))
+        units.append(SlideUnit(title=title, bullets=["核心内容待补充"]))
 
     for table in section.tables[:1]:
-        units.append(SlideUnit(title=section.title, table=table))
+        units.append(SlideUnit(title=title, table=table))
 
     for code in section.code_blocks[:1]:
-        units.append(SlideUnit(title=section.title, code_block=code[:MAX_CODE_LINES]))
+        units.append(SlideUnit(title=title, code_block=code[:MAX_CODE_LINES]))
 
     if should_use_transition(section.title, section.bullets) and units:
         units[0].is_transition = True
@@ -228,6 +255,8 @@ def should_use_transition(title: str, bullets: list[str]) -> bool:
 
 
 def select_layout(unit: SlideUnit) -> str:
+    if unit.layout_hint:
+        return unit.layout_hint
     title_text = unit.title.lower()
     all_text = f"{unit.title} {' '.join(unit.bullets)}".lower()
     if unit.is_transition:
@@ -250,6 +279,18 @@ def apply_theme(slide, prs: Presentation, emphasize_texture: bool = False) -> No
     bg = slide.background.fill
     bg.solid()
     bg.fore_color.rgb = COLOR_BG
+
+    glow = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0), Inches(0), prs.slide_width, prs.slide_height)
+    glow.fill.solid()
+    glow.fill.fore_color.rgb = COLOR_WHITE
+    glow.fill.transparency = 0.72
+    glow.line.fill.background()
+
+    light = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(6.7), Inches(0.2), Inches(6.4), Inches(7.0))
+    light.fill.solid()
+    light.fill.fore_color.rgb = RGBColor(0xE8, 0xF0, 0xFF)
+    light.fill.transparency = 0.9
+    light.line.fill.background()
 
     top_strip = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0), Inches(0), prs.slide_width, Inches(0.06))
     top_strip.fill.solid()
@@ -308,6 +349,29 @@ def add_background_texture(slide, emphasize: bool = False) -> None:
         dot.fill.fore_color.rgb = COLOR_DECOR
         dot.fill.transparency = TEXTURE_DOT_TRANSPARENCY
         dot.line.fill.background()
+
+    circuit_h = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(9.1), Inches(2.15), Inches(1.6), Inches(0.01))
+    circuit_h.fill.solid()
+    circuit_h.fill.fore_color.rgb = COLOR_DECOR
+    circuit_h.fill.transparency = transparency
+    circuit_h.line.fill.background()
+    circuit_v = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(10.68), Inches(2.15), Inches(0.01), Inches(1.2))
+    circuit_v.fill.solid()
+    circuit_v.fill.fore_color.rgb = COLOR_DECOR
+    circuit_v.fill.transparency = transparency
+    circuit_v.line.fill.background()
+    circuit_h2 = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(10.68), Inches(3.34), Inches(1.2), Inches(0.01))
+    circuit_h2.fill.solid()
+    circuit_h2.fill.fore_color.rgb = COLOR_DECOR
+    circuit_h2.fill.transparency = transparency
+    circuit_h2.line.fill.background()
+
+    for idx in range(4):
+        bar = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(12.25), Inches(1.55 + idx * 0.36), Inches(0.5), Inches(0.1))
+        bar.fill.solid()
+        bar.fill.fore_color.rgb = COLOR_DECOR
+        bar.fill.transparency = 0.9 if idx % 2 == 0 else 0.84
+        bar.line.fill.background()
 
     arc = slide.shapes.add_shape(MSO_SHAPE.ARC, Inches(10.55), Inches(4.45), Inches(1.65), Inches(1.1))
     arc.fill.background()
@@ -486,24 +550,39 @@ def add_right_tech_panel(slide, panel_label: str = "技术面板") -> None:
     p.text = panel_label
     set_para_style(p, 11, COLOR_SUBTEXT, align=PP_ALIGN.CENTER)
 
-    frame = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(10.1), Inches(3.15), Inches(1.9), Inches(1.35))
-    frame.fill.background()
-    frame.line.color.rgb = COLOR_DECOR
-    frame.line.transparency = 0.5
-    frame.line.width = Pt(1.2)
-    frame.adjustments[0] = 0.08
+    module = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(10.05), Inches(2.55), Inches(2.05), Inches(2.05))
+    module.fill.background()
+    module.line.color.rgb = COLOR_DECOR
+    module.line.transparency = 0.46
+    module.line.width = Pt(1.2)
+    module.adjustments[0] = 0.08
 
-    screen = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(10.26), Inches(3.32), Inches(1.58), Inches(0.9))
-    screen.fill.background()
-    screen.line.color.rgb = COLOR_DECOR
-    screen.line.transparency = 0.66
-    screen.line.width = Pt(1)
+    for y in [2.9, 3.25, 3.6, 3.95]:
+        line = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(10.25), Inches(y), Inches(1.65), Inches(0.01))
+        line.fill.solid()
+        line.fill.fore_color.rgb = COLOR_DECOR
+        line.fill.transparency = 0.8
+        line.line.fill.background()
 
-    base = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(10.82), Inches(4.28), Inches(0.5), Inches(0.08))
-    base.fill.solid()
-    base.fill.fore_color.rgb = COLOR_DECOR
-    base.fill.transparency = 0.75
-    base.line.fill.background()
+    for x in [10.45, 11.05, 11.65]:
+        line = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(x), Inches(2.75), Inches(0.01), Inches(1.55))
+        line.fill.solid()
+        line.fill.fore_color.rgb = COLOR_DECOR
+        line.fill.transparency = 0.84
+        line.line.fill.background()
+
+    for idx, txt in enumerate(["API", "Data", "Ops"]):
+        t = slide.shapes.add_textbox(Inches(9.95), Inches(4.8 + idx * 0.34), Inches(2.3), Inches(0.2))
+        tf = t.text_frame
+        tf.clear()
+        p2 = tf.paragraphs[0]
+        p2.text = txt
+        set_para_style(p2, 10, COLOR_SUBTEXT)
+        marker = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(10.8), Inches(4.88 + idx * 0.34), Inches(1.25), Inches(0.01))
+        marker.fill.solid()
+        marker.fill.fore_color.rgb = COLOR_DECOR
+        marker.fill.transparency = 0.78
+        marker.line.fill.background()
 
     glow = slide.shapes.add_shape(MSO_SHAPE.ARC, Inches(9.92), Inches(2.9), Inches(2.25), Inches(1.75))
     glow.fill.background()
@@ -529,6 +608,36 @@ def render_layout_b(slide, unit: SlideUnit) -> None:
 
     add_bullets(slide, left, Inches(1.05), Inches(1.72), Inches(5.3), Inches(4.9), size=15)
     add_bullets(slide, right, Inches(6.9), Inches(1.72), Inches(5.3), Inches(4.9), size=15)
+
+
+def render_layout_e(slide, unit: SlideUnit) -> None:
+    add_glass_card(slide, Inches(0.9), Inches(1.45), Inches(8.45), Inches(5.3), transparency=0.2)
+    add_right_tech_panel(slide, panel_label="目录 / Agenda")
+
+    for idx, item in enumerate(unit.bullets[:8], start=1):
+        y = Inches(1.8 + (idx - 1) * 0.58)
+        badge = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(1.2), y, Inches(0.48), Inches(0.32))
+        badge.fill.solid()
+        badge.fill.fore_color.rgb = RGBColor(0xE9, 0xF1, 0xFF)
+        badge.line.fill.background()
+        btf = badge.text_frame
+        btf.clear()
+        bp = btf.paragraphs[0]
+        bp.text = str(idx)
+        set_para_style(bp, 10, COLOR_PRIMARY, bold=True, align=PP_ALIGN.CENTER)
+
+        line = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(1.78), y + Inches(0.16), Inches(0.32), Inches(0.01))
+        line.fill.solid()
+        line.fill.fore_color.rgb = COLOR_DECOR
+        line.fill.transparency = 0.78
+        line.line.fill.background()
+
+        box = slide.shapes.add_textbox(Inches(2.2), y - Inches(0.03), Inches(6.7), Inches(0.4))
+        tf = box.text_frame
+        tf.clear()
+        p = tf.paragraphs[0]
+        p.text = item
+        set_para_style(p, 15, COLOR_TEXT if idx <= 3 else COLOR_SUBTEXT)
 
 
 def render_layout_c(slide, unit: SlideUnit) -> None:
@@ -673,6 +782,73 @@ def extract_cover(sections: list[Section]) -> tuple[str, str]:
     return title, subtitle
 
 
+def merge_units_for_limit(units: list[SlideUnit], target: int) -> list[SlideUnit]:
+    merged = list(units)
+    while len(merged) > target and len(merged) >= 2:
+        best_idx = 0
+        best_score = 10**9
+        for i in range(len(merged) - 1):
+            score = len(merged[i].bullets) + len(merged[i + 1].bullets)
+            if merged[i].table or merged[i + 1].table:
+                score += 4
+            if merged[i].code_block or merged[i + 1].code_block:
+                score += 4
+            if score < best_score:
+                best_score = score
+                best_idx = i
+        a = merged[best_idx]
+        b = merged[best_idx + 1]
+        title = shorten_title(a.title, max_len=20)
+        bullets = summarize_bullets([*a.bullets, *b.bullets], MAX_BULLETS_PER_SLIDE)
+        merged_unit = SlideUnit(
+            title=title,
+            bullets=bullets,
+            table=a.table or b.table,
+            code_block=a.code_block or b.code_block,
+            is_transition=a.is_transition or b.is_transition,
+            layout_hint=a.layout_hint or b.layout_hint,
+        )
+        merged = merged[:best_idx] + [merged_unit] + merged[best_idx + 2:]
+    return merged
+
+
+def build_agenda_unit(units: list[SlideUnit]) -> SlideUnit:
+    agenda_items = [shorten_title(u.title, max_len=20) for u in units[:8]]
+    if len(units) > 8:
+        agenda_items[-1] = "总结与展望"
+    return SlideUnit(title="目录总览", bullets=agenda_items or ["项目概览", "系统设计", "技术实现", "总结展望"], layout_hint=LAYOUT_AGENDA)
+
+
+def build_padding_units() -> list[SlideUnit]:
+    return [
+        SlideUnit(title="关键亮点", bullets=["智能评估链路闭环", "岗位匹配准确率提升", "全链路可解释反馈", "多模型融合增强鲁棒性"], layout_hint=LAYOUT_DEFAULT),
+        SlideUnit(title="系统架构总览", bullets=["接入层：Web/API 网关", "服务层：画像/推荐/评估引擎", "数据层：MySQL + Redis + 向量检索", "治理层：监控告警与审计追踪"], layout_hint=LAYOUT_TIMELINE),
+        SlideUnit(title="技术栈设计", bullets=["Go + Gin + gRPC 微服务", "MySQL / Redis / Elasticsearch", "Docker + CI/CD 自动化交付", "Prompt + RAG + 工具调用"], layout_hint=LAYOUT_DOUBLE),
+        SlideUnit(title="部署与运维", bullets=["容器化发布与灰度策略", "可观测：日志/指标/链路追踪", "自动扩缩容与资源治理", "安全策略与数据备份"], layout_hint=LAYOUT_DEFAULT),
+        SlideUnit(title="总结与展望", bullets=["已实现从测评到推荐的完整闭环", "下一步引入实时行为强化学习", "持续提升推荐质量与可解释性"], layout_hint=LAYOUT_CHAPTER, is_transition=True),
+    ]
+
+
+def build_content_units(sections: list[Section]) -> list[SlideUnit]:
+    raw_units: list[SlideUnit] = []
+    for sec in sections:
+        raw_units.extend(split_section(sec))
+    raw_units = [SlideUnit(title=shorten_title(u.title, max_len=18), bullets=summarize_bullets(u.bullets), table=u.table, code_block=u.code_block, is_transition=u.is_transition, layout_hint=u.layout_hint) for u in raw_units]
+    raw_units = merge_units_for_limit(raw_units, TARGET_CONTENT_SLIDES - 1)
+
+    content: list[SlideUnit] = [build_agenda_unit(raw_units)]
+    content.extend(raw_units)
+
+    pads = build_padding_units()
+    pad_idx = 0
+    while len(content) < TARGET_CONTENT_SLIDES:
+        content.append(pads[pad_idx % len(pads)])
+        pad_idx += 1
+
+    content = merge_units_for_limit(content, TARGET_CONTENT_SLIDES)
+    return content[:TARGET_CONTENT_SLIDES]
+
+
 def build_ppt(md_paths: list[Path], output_path: Path, logo_path: Path) -> None:
     sections: list[Section] = []
     for md in md_paths:
@@ -685,32 +861,34 @@ def build_ppt(md_paths: list[Path], output_path: Path, logo_path: Path) -> None:
     title, subtitle = extract_cover(sections)
     add_cover(prs, title, subtitle, logo_path)
 
+    content_units = build_content_units(sections)
     page_no = 1
-    for sec in sections:
-        for unit in split_section(sec):
-            slide = prs.slides.add_slide(prs.slide_layouts[6])
-            layout = select_layout(unit)
-            apply_theme(slide, prs, emphasize_texture=(layout == LAYOUT_CHAPTER))
-            if layout != LAYOUT_CHAPTER:
-                add_title_block(slide, unit.title)
-            if unit.table:
-                render_table_card(slide, unit.table, Inches(0.95), Inches(1.55), Inches(11.4), Inches(5.1))
-            elif unit.code_block:
-                render_code_card(slide, unit.code_block, Inches(0.95), Inches(1.55), Inches(11.4), Inches(5.1))
-            elif layout == LAYOUT_DOUBLE:
-                render_layout_b(slide, unit)
-            elif layout == LAYOUT_CHAPTER:
-                render_layout_c(slide, unit)
-            elif layout == LAYOUT_TIMELINE:
-                render_layout_d(slide, unit)
-            else:
-                render_layout_a(slide, unit, logo_path)
+    for unit in content_units:
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        layout = select_layout(unit)
+        apply_theme(slide, prs, emphasize_texture=(layout == LAYOUT_CHAPTER))
+        if layout not in {LAYOUT_CHAPTER, LAYOUT_AGENDA}:
+            add_title_block(slide, unit.title)
+        if unit.table:
+            render_table_card(slide, unit.table, Inches(0.95), Inches(1.55), Inches(11.4), Inches(5.1))
+        elif unit.code_block:
+            render_code_card(slide, unit.code_block, Inches(0.95), Inches(1.55), Inches(11.4), Inches(5.1))
+        elif layout == LAYOUT_DOUBLE:
+            render_layout_b(slide, unit)
+        elif layout == LAYOUT_CHAPTER:
+            render_layout_c(slide, unit)
+        elif layout == LAYOUT_TIMELINE:
+            render_layout_d(slide, unit)
+        elif layout == LAYOUT_AGENDA:
+            render_layout_e(slide, unit)
+        else:
+            render_layout_a(slide, unit, logo_path)
 
-            if layout in {LAYOUT_DOUBLE, LAYOUT_TIMELINE}:
-                add_go_logo_if_needed(slide, unit, logo_path)
+        if layout in {LAYOUT_DOUBLE, LAYOUT_TIMELINE, LAYOUT_AGENDA}:
+            add_go_logo_if_needed(slide, unit, logo_path)
 
-            add_footer(slide, prs, page_no)
-            page_no += 1
+        add_footer(slide, prs, page_no)
+        page_no += 1
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     prs.save(output_path)
