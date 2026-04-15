@@ -1,19 +1,18 @@
 # Competition PPTX Generator
 
-本仓库提供脚本，可将仓库内 Markdown（按页总结内容）自动生成灰白科技数码风 PPTX，并统一为 16:9 主题风格。
+本仓库提供脚本，可将仓库内 Markdown（按页总结内容）自动生成**浅色灰白、简约科技数码风**的 16:9 比赛 PPTX，并参考仓库 PDF 统一主题。
 
 ## 输入来源
 
 - Markdown 内容源：`CareerPlanner — 基于 AI 的大学生职业规划智能体.md`
 - 风格参考 PDF：`比赛用的最终ppt.pdf`
+- Go Logo 资源：`assets/icons/go.png`
 
-## 基础信息（已写入封面与页脚）
+## 固定信息（封面/页脚）
 
 - 队伍名称：我们叫什么名字
 - 所属学校：浙江师范大学
 - 参赛赛道：A类
-
-> 注：队伍名称使用题目给定值，如需替换可修改 `tools/generate_ppt.py` 顶部常量。
 
 ## 安装依赖
 
@@ -21,26 +20,30 @@
 pip install -r requirements.txt
 ```
 
-## 生成 PPTX
+## 生成命令
 
 ```bash
-python tools/generate_ppt.py --output slides/competition.pptx
-```
-
-也可以指定 Markdown 输入模式：
-
-```bash
-python tools/generate_ppt.py --inputs "CareerPlanner*.md" "docs/**/*.md" --output slides/competition.pptx
+python tools/generate_ppt.py \
+  --inputs "CareerPlanner*.md" "docs/**/*.md" \
+  --go-logo assets/icons/go.png \
+  --output slides/competition.pptx
 ```
 
 ## 输出文件
 
-- PPT 输出路径：`slides/competition.pptx`
+- PPT 输出：`slides/competition.pptx`
 
-## 风格说明
+## 生成特性（本次改造）
 
-- 16:9 宽屏
-- 灰白底色 + 冷蓝强调（背景 `#F5F7FA`，主色 `#2F6FED`）
-- 默认字体：微软雅黑（Microsoft YaHei）
-- 浅网格背景（形状绘制，无外部背景图依赖）
-- 在技术栈/实现/部署/架构相关页面自动放置 Go 风格角标（右上角）
+- 统一主题组件：顶部强调条、标题分隔线、信息卡片、统一页脚与页码
+- 轻量 HUD/几何装饰：低对比、保留留白，不遮挡正文
+- 多布局自动选择：
+  - Layout A（左文右图标区）
+  - Layout B（双栏要点）
+  - Layout C（章节/过渡页）
+  - Layout D（流程/阶段页）
+- 内容优化：
+  - 要点超过阈值自动拆页并添加 `(1/2)` 标记
+  - Markdown 表格渲染为卡片式两列对齐
+  - Markdown 代码块渲染为深色代码卡片（等宽字体）
+- Go 图标规则：标题/要点命中 `Go/golang/gin/grpc/编译/Go语言` 时自动放置 `assets/icons/go.png`
