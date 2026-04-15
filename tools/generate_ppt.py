@@ -63,6 +63,16 @@ TECH_KEYWORD_ICON_MAP = {
     "nginx": "nginx.png",
     "github": "github.png",
 }
+ICON_DISPLAY_NAMES = {
+    "go": "GO",
+    "docker": "DOCKER",
+    "mysql": "MYSQL",
+    "redis": "REDIS",
+    "kubernetes": "K8S",
+    "postgresql": "POSTGRESQL",
+    "nginx": "NGINX",
+    "github": "GITHUB",
+}
 PROCESS_KEYWORDS = ("流程", "步骤", "阶段", "演进", "架构")
 CHAPTER_KEYWORDS = ("总结", "感谢", "目录", "展望", "第", "功能")
 MARKDOWN_LANGUAGE_MARKERS = {"text", "yaml", "json", "sql", "go", "bash"}
@@ -320,14 +330,11 @@ def detect_tech_icons(unit: SlideUnit, icon_dir: Path = ICONS_DIR) -> list[Path]
 
 
 def extract_tech_keywords(unit: SlideUnit) -> list[str]:
-    text = f"{unit.title} {' '.join(unit.bullets)}".lower()
     tags: list[str] = []
-    for kw in TECH_KEYWORD_ICON_MAP:
-        if kw in text and kw not in tags:
-            if kw == "postgres":
-                tags.append("POSTGRESQL")
-            else:
-                tags.append(kw.upper())
+    for icon_path in detect_tech_icons(unit):
+        label = ICON_DISPLAY_NAMES.get(icon_path.stem, icon_path.stem.upper())
+        if label not in tags:
+            tags.append(label)
     return tags[:2]
 
 
@@ -838,7 +845,8 @@ def add_cover(prs: Presentation, title: str, subtitle: str, logo_path: Path, bac
     p3.text = f"赛道\n{TRACK_NAME}"
     set_para_style(p3, 12, COLOR_SUBTEXT)
 
-    cover_unit = SlideUnit(title=title, bullets=[subtitle, "Go Docker MySQL Redis Kubernetes PostgreSQL Nginx GitHub"])
+    cover_tech = " ".join(ICON_DISPLAY_NAMES.values())
+    cover_unit = SlideUnit(title=title, bullets=[subtitle, cover_tech])
     add_right_tech_panel(slide, cover_unit, panel_label="COVER / TECH")
 
     if logo_path.exists():
@@ -915,7 +923,7 @@ def build_padding_units() -> list[SlideUnit]:
     return [
         SlideUnit(title="关键亮点与创新", bullets=["智能评估链路闭环", "岗位匹配准确率提升", "全链路可解释反馈", "多模型融合增强鲁棒性"], layout_hint=LAYOUT_DEFAULT),
         SlideUnit(title="系统架构总览", bullets=["接入层：Web/API 网关", "服务层：画像/推荐/评估引擎", "数据层：MySQL + Redis + 向量检索", "治理层：监控告警与审计追踪"], layout_hint=LAYOUT_TIMELINE),
-        SlideUnit(title="技术栈设计", bullets=["Go + Gin + gRPC 微服务", "MySQL / Redis / PostgreSQL", "Docker + Kubernetes 自动化交付", "Nginx + GitHub Actions 持续集成"], layout_hint=LAYOUT_DOUBLE),
+        SlideUnit(title="技术栈设计", bullets=["服务层采用主流后端框架", "数据层采用数据库与缓存组合", "容器化与编排提升交付效率", "网关与协作平台保障稳定迭代"], layout_hint=LAYOUT_DOUBLE),
         SlideUnit(title="部署与运维", bullets=["容器化发布与灰度策略", "可观测：日志/指标/链路追踪", "自动扩缩容与资源治理", "安全策略与数据备份"], layout_hint=LAYOUT_DEFAULT),
         SlideUnit(title="演示流程", bullets=["登录与身份校验", "岗位画像生成", "智能问卷评估", "报告实时流式输出"], layout_hint=LAYOUT_TIMELINE),
     ]
