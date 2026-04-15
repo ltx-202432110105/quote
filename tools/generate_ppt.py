@@ -34,6 +34,7 @@ GO_KEYWORDS = ("go", "golang", "gin", "grpc", "编译", "go语言")
 PROCESS_KEYWORDS = ("流程", "步骤", "阶段", "演进", "架构")
 CHAPTER_KEYWORDS = ("总结", "感谢", "目录", "展望", "第", "功能")
 MARKDOWN_LANGUAGE_MARKERS = {"text", "yaml", "json", "sql", "go", "bash"}
+TECH_LAYOUT_KEYWORDS = ("架构", "技术", "部署", "实现")
 REFERENCE_PDF = "比赛用的最终ppt.pdf"
 
 
@@ -211,7 +212,7 @@ def select_layout(unit: SlideUnit) -> str:
         return "D"
     if unit.table or len(unit.bullets) >= 5:
         return "B"
-    if "架构" in title_text or "技术" in title_text or "部署" in title_text or "实现" in title_text:
+    if any(k in title_text for k in TECH_LAYOUT_KEYWORDS):
         return "A"
     return "A"
 
@@ -369,7 +370,7 @@ def render_table_card(slide, table: TableData, x, y, w, h) -> None:
 
 def render_code_card(slide, code_lines: list[str], x, y, w, h) -> None:
     card = add_card(slide, x, y, w, h, fill_color=COLOR_CODE_BG, border_color=RGBColor(0x2F, 0x3C, 0x52))
-    # 调整圆角半径比例，让代码卡片更接近数码风面板观感。
+    # Tune corner radius ratio for a cleaner digital panel style.
     card.adjustments[0] = 0.12
 
     tag = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, x + Inches(0.14), y + Inches(0.10), Inches(1.0), Inches(0.28))
