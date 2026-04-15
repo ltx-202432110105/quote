@@ -41,7 +41,7 @@ CHAPTER_KEYWORDS = ("总结", "感谢", "目录", "展望", "第", "功能")
 MARKDOWN_LANGUAGE_MARKERS = {"text", "yaml", "json", "sql", "go", "bash"}
 TECH_LAYOUT_KEYWORDS = ("架构", "技术", "部署", "实现")
 REFERENCE_PDF = "比赛用的最终ppt.pdf"
-GO_LOGO_ANCHOR = (Inches(10.7), Inches(1.52), Inches(2.0))
+GO_LOGO_PLACEMENT = (Inches(10.7), Inches(1.52), Inches(2.0))
 
 
 @dataclass
@@ -269,7 +269,7 @@ def add_hud_decor(slide) -> None:
 
 
 def add_background_texture(slide, emphasize: bool = False) -> None:
-    opacity = 0.89 if emphasize else 0.94
+    transparency = 0.89 if emphasize else 0.94
     h_lines = [Inches(1.9), Inches(3.25)] if emphasize else [Inches(4.75)]
     v_lines = [Inches(8.35), Inches(9.85)] if emphasize else [Inches(11.25)]
     dots = [(8.55, 1.7), (9.1, 2.2), (10.35, 3.0), (11.2, 4.25)] if emphasize else [(10.9, 3.15), (11.35, 3.7)]
@@ -278,14 +278,14 @@ def add_background_texture(slide, emphasize: bool = False) -> None:
         line = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(1.0), y, Inches(6.3), Inches(0.01))
         line.fill.solid()
         line.fill.fore_color.rgb = COLOR_DECOR
-        line.fill.transparency = opacity
+        line.fill.transparency = transparency
         line.line.fill.background()
 
     for x in v_lines:
         line = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, x, Inches(1.55), Inches(0.01), Inches(3.7))
         line.fill.solid()
         line.fill.fore_color.rgb = COLOR_DECOR
-        line.fill.transparency = opacity
+        line.fill.transparency = transparency
         line.line.fill.background()
 
     for x, y in dots:
@@ -461,7 +461,7 @@ def render_code_card(slide, code_lines: list[str], x, y, w, h) -> None:
 
 def add_go_logo_if_needed(slide, unit: SlideUnit, logo_path: Path) -> None:
     if need_go_logo(unit) and logo_path.exists():
-        x, y, w = GO_LOGO_ANCHOR
+        x, y, w = GO_LOGO_PLACEMENT
         slide.shapes.add_picture(str(logo_path), x, y, width=w)
 
 
@@ -519,10 +519,10 @@ def render_layout_b(slide, unit: SlideUnit) -> None:
 
 
 def render_layout_c(slide, unit: SlideUnit) -> None:
-    badge_text = "SECTION"
+    badge_text = "CHAPTER"
     match = re.search(r"第\s*(\d+)\s*页", unit.title)
     if match:
-        badge_text = f"SECTION {match.group(1)}"
+        badge_text = f"PAGE {match.group(1)}"
 
     badge = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.95), Inches(1.78), Inches(2.05), Inches(0.56))
     badge.fill.solid()
