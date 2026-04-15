@@ -207,7 +207,7 @@ def chunk_bullets(bullets: list[str], chunk_size: int) -> list[list[str]]:
 
 
 def normalize_and_shorten_title(title: str, max_len: int = TITLE_LEN_NORMAL) -> str:
-    """Normalize a section title into concise PPT-friendly text with length cap."""
+    """Normalize title text (remove page/pagination markers, collapse spaces) then truncate."""
     t = cleanup_text(title).replace("：", " ").replace("—", " ")
     t = re.sub(r"^第\s*\d+\s*页\s*[-—:：]?\s*", "", t)
     t = re.sub(r"（\d+/\d+）", "", t)
@@ -219,7 +219,11 @@ def normalize_and_shorten_title(title: str, max_len: int = TITLE_LEN_NORMAL) -> 
 
 def summarize_bullets(bullets: list[str], max_items: int = MAX_BULLETS_PER_SLIDE) -> list[str]:
     """Limit bullet count to max_items and append an overflow summary note when needed."""
-    cleaned = [cleanup_text(x) for x in bullets if cleanup_text(x)]
+    cleaned: list[str] = []
+    for bullet in bullets:
+        item = cleanup_text(bullet)
+        if item:
+            cleaned.append(item)
     if not cleaned:
         return [PLACEHOLDER_BULLET]
     if len(cleaned) <= max_items:
@@ -807,7 +811,7 @@ def normalize_unit(unit: SlideUnit) -> SlideUnit:
 def merge_units_for_limit(units: list[SlideUnit], target: int) -> list[SlideUnit]:
     """Merge adjacent low-complexity units until the unit count reaches target."""
     merged = list(units)
-    while len(merged) > target and len(merged) >= 2:
+    while len(merged) > target:
         best_idx = 0
         best_score = float("inf")
         for i in range(len(merged) - 1):
@@ -845,7 +849,7 @@ def build_agenda_unit(units: list[SlideUnit]) -> SlideUnit:
 
 def build_padding_units() -> list[SlideUnit]:
     """Return fallback design slides used to pad content to the target page count."""
-    # These fallback templates are defaults for this competition deck and can be customized per project.
+    # These fallback templates are defaults for this competition deck and should be customized per project.
     return [
         SlideUnit(title="关键亮点", bullets=["智能评估链路闭环", "岗位匹配准确率提升", "全链路可解释反馈", "多模型融合增强鲁棒性"], layout_hint=LAYOUT_DEFAULT),
         SlideUnit(title="系统架构总览", bullets=["接入层：Web/API 网关", "服务层：画像/推荐/评估引擎", "数据层：MySQL + Redis + 向量检索", "治理层：监控告警与审计追踪"], layout_hint=LAYOUT_TIMELINE),
@@ -870,7 +874,7 @@ def build_content_units(sections: list[Section]) -> list[SlideUnit]:
     pads = build_padding_units()
     pad_idx = 0
     while len(content) < TARGET_CONTENT_SLIDES:
-        # Cycle fallback templates when multiple pad pages are required.
+        # Cycle through fallback templates using modulo when multiple padding pages are required.
         content.append(pads[pad_idx % len(pads)])
         pad_idx += 1
 
