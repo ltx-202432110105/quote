@@ -30,7 +30,7 @@ python tools/generate_ppt.py --output slides/competition.pptx
 也可以指定 Markdown 输入模式：
 
 ```bash
-python tools/generate_ppt.py --inputs "*.md" "docs/**/*.md" --output slides/competition.pptx
+python tools/generate_ppt.py --inputs "CareerPlanner*.md" "docs/**/*.md" --output slides/competition.pptx
 ```
 
 ## 输出文件
