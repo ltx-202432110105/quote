@@ -46,11 +46,30 @@ MERGE_TABLE_PENALTY = 4
 MERGE_CODE_PENALTY = 4
 PLACEHOLDER_BULLET = "待补充内容"
 GO_KEYWORDS = ("go", "golang", "gin", "grpc", "编译", "go语言")
+TECH_KEYWORD_ICON_MAP = {
+    "go": "go.png",
+    "golang": "go.png",
+    "go语言": "go.png",
+    "gin": "go.png",
+    "grpc": "go.png",
+    "go-zero": "go.png",
+    "docker": "docker.png",
+    "mysql": "mysql.png",
+    "redis": "redis.png",
+    "k8s": "kubernetes.png",
+    "kubernetes": "kubernetes.png",
+    "postgres": "postgresql.png",
+    "postgresql": "postgresql.png",
+    "nginx": "nginx.png",
+    "github": "github.png",
+}
 PROCESS_KEYWORDS = ("流程", "步骤", "阶段", "演进", "架构")
 CHAPTER_KEYWORDS = ("总结", "感谢", "目录", "展望", "第", "功能")
 MARKDOWN_LANGUAGE_MARKERS = {"text", "yaml", "json", "sql", "go", "bash"}
 TECH_LAYOUT_KEYWORDS = ("架构", "技术", "部署", "实现")
 REFERENCE_PDF = "比赛用的最终ppt.pdf"
+BACKGROUND_GLOB = "assets/backgrounds/*"
+ICONS_DIR = Path("assets/icons")
 GO_LOGO_X = Inches(10.7)
 GO_LOGO_Y = Inches(1.52)
 GO_LOGO_WIDTH = Inches(2.0)
@@ -289,10 +308,43 @@ def need_go_logo(unit: SlideUnit) -> bool:
     return any(k in txt for k in GO_KEYWORDS)
 
 
-def apply_theme(slide, prs: Presentation, emphasize_texture: bool = False) -> None:
+def detect_tech_icons(unit: SlideUnit, icon_dir: Path = ICONS_DIR) -> list[Path]:
+    text = f"{unit.title} {' '.join(unit.bullets)}".lower()
+    hits: list[Path] = []
+    for kw, icon_name in TECH_KEYWORD_ICON_MAP.items():
+        if kw in text:
+            p = icon_dir / icon_name
+            if p.exists() and p not in hits:
+                hits.append(p)
+    return hits[:4]
+
+
+def extract_tech_keywords(unit: SlideUnit) -> list[str]:
+    text = f"{unit.title} {' '.join(unit.bullets)}".lower()
+    tags: list[str] = []
+    for kw in TECH_KEYWORD_ICON_MAP:
+        if kw in text and kw not in tags:
+            tags.append(kw.upper().replace("GO-ZERO", "GO-ZERO"))
+    return [t.replace("POSTGRES", "POSTGRESQL") for t in tags[:2]]
+
+
+def resolve_backgrounds() -> list[Path]:
+    files = [Path(p) for p in sorted(glob.glob(BACKGROUND_GLOB))]
+    return [p for p in files if p.is_file() and p.suffix.lower() in {".jpg", ".jpeg", ".png"}]
+
+
+def apply_theme(slide, prs: Presentation, background_path: Path | None = None, emphasize_texture: bool = False) -> None:
     bg = slide.background.fill
     bg.solid()
     bg.fore_color.rgb = COLOR_BG
+
+    if background_path and background_path.exists():
+        slide.shapes.add_picture(str(background_path), Inches(0), Inches(0), width=prs.slide_width, height=prs.slide_height)
+        veil = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0), Inches(0), prs.slide_width, prs.slide_height)
+        veil.fill.solid()
+        veil.fill.fore_color.rgb = COLOR_WHITE
+        veil.fill.transparency = 0.2
+        veil.line.fill.background()
 
     glow = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0), Inches(0), prs.slide_width, prs.slide_height)
     glow.fill.solid()
@@ -551,12 +603,7 @@ def render_code_card(slide, code_lines: list[str], x, y, w, h) -> None:
         p.space_after = Pt(2)
 
 
-def add_go_logo_if_needed(slide, unit: SlideUnit, logo_path: Path) -> None:
-    if need_go_logo(unit) and logo_path.exists():
-        slide.shapes.add_picture(str(logo_path), GO_LOGO_X, GO_LOGO_Y, width=GO_LOGO_WIDTH)
-
-
-def add_right_tech_panel(slide, panel_label: str = "技术面板") -> None:
+def add_right_tech_panel(slide, unit: SlideUnit, panel_label: str = "TECH PANEL") -> None:
     panel = add_glass_card(slide, Inches(9.65), Inches(1.45), Inches(2.85), Inches(5.35), fill_color=RGBColor(0xF8, 0xFB, 0xFF), transparency=0.26)
     ptf = panel.text_frame
     ptf.clear()
@@ -585,7 +632,8 @@ def add_right_tech_panel(slide, panel_label: str = "技术面板") -> None:
         line.fill.transparency = 0.84
         line.line.fill.background()
 
-    for idx, txt in enumerate(["API", "Data", "Ops"]):
+    tech_tags = extract_tech_keywords(unit) or ["GO + GIN", "MYSQL + REDIS"]
+    for idx, txt in enumerate(tech_tags[:2]):
         t = slide.shapes.add_textbox(Inches(9.95), Inches(4.8 + idx * 0.34), Inches(2.3), Inches(0.2))
         tf = t.text_frame
         tf.clear()
@@ -604,29 +652,35 @@ def add_right_tech_panel(slide, panel_label: str = "技术面板") -> None:
     glow.line.transparency = 0.86
     glow.line.width = Pt(1)
 
+    icons = detect_tech_icons(unit)
+    for idx, icon in enumerate(icons[:4]):
+        x = Inches(9.95 + (idx % 2) * 1.25)
+        y = Inches(1.95 + (idx // 2) * 1.05)
+        slide.shapes.add_picture(str(icon), x, y, width=Inches(0.8), height=Inches(0.8))
 
-def render_layout_a(slide, unit: SlideUnit, logo_path: Path) -> None:
+
+def render_layout_a(slide, unit: SlideUnit) -> None:
     add_glass_card(slide, Inches(0.8), Inches(1.45), Inches(8.6), Inches(5.35), transparency=0.2)
     add_bullets(slide, unit.bullets, Inches(1.05), Inches(1.72), Inches(8.1), Inches(4.8), size=16)
-    add_right_tech_panel(slide)
-    add_go_logo_if_needed(slide, unit, logo_path)
+    add_right_tech_panel(slide, unit, panel_label="TECH STACK")
 
 
 def render_layout_b(slide, unit: SlideUnit) -> None:
-    add_glass_card(slide, Inches(0.8), Inches(1.45), Inches(5.85), Inches(5.35), transparency=0.2)
-    add_glass_card(slide, Inches(6.65), Inches(1.45), Inches(5.85), Inches(5.35), transparency=0.2)
+    add_glass_card(slide, Inches(0.8), Inches(1.45), Inches(4.25), Inches(5.35), transparency=0.2)
+    add_glass_card(slide, Inches(5.15), Inches(1.45), Inches(4.25), Inches(5.35), transparency=0.2)
+    add_right_tech_panel(slide, unit, panel_label="TECH CARD")
 
     mid = (len(unit.bullets) + 1) // 2
     left = unit.bullets[:mid]
     right = unit.bullets[mid:]
 
-    add_bullets(slide, left, Inches(1.05), Inches(1.72), Inches(5.3), Inches(4.9), size=15)
-    add_bullets(slide, right, Inches(6.9), Inches(1.72), Inches(5.3), Inches(4.9), size=15)
+    add_bullets(slide, left, Inches(1.05), Inches(1.72), Inches(3.9), Inches(4.9), size=14)
+    add_bullets(slide, right, Inches(5.4), Inches(1.72), Inches(3.9), Inches(4.9), size=14)
 
 
 def render_layout_e(slide, unit: SlideUnit) -> None:
     add_glass_card(slide, Inches(0.9), Inches(1.45), Inches(8.45), Inches(5.3), transparency=0.2)
-    add_right_tech_panel(slide, panel_label="目录 / Agenda")
+    add_right_tech_panel(slide, unit, panel_label="AGENDA")
 
     for idx, item in enumerate(unit.bullets[:MAX_AGENDA_ITEMS], start=1):
         y = Inches(1.8 + (idx - 1) * 0.58)
@@ -671,10 +725,11 @@ def render_layout_c(slide, unit: SlideUnit) -> None:
     p.text = badge_text
     set_para_style(p, 14, COLOR_PRIMARY, bold=True, align=PP_ALIGN.CENTER)
 
-    glass = add_glass_card(slide, Inches(0.95), Inches(2.45), Inches(9.55), Inches(2.55), transparency=0.22)
+    glass = add_glass_card(slide, Inches(0.95), Inches(2.45), Inches(8.45), Inches(2.55), transparency=0.22)
     glass.line.color.rgb = RGBColor(0xD7, 0xE2, 0xEF)
+    add_right_tech_panel(slide, unit, panel_label="SECTION")
 
-    tbox = slide.shapes.add_textbox(Inches(1.25), Inches(2.8), Inches(9.0), Inches(2.0))
+    tbox = slide.shapes.add_textbox(Inches(1.25), Inches(2.8), Inches(7.8), Inches(2.0))
     ttf = tbox.text_frame
     ttf.clear()
     p2 = ttf.paragraphs[0]
@@ -697,7 +752,8 @@ def render_layout_c(slide, unit: SlideUnit) -> None:
 
 
 def render_layout_d(slide, unit: SlideUnit) -> None:
-    add_glass_card(slide, Inches(0.8), Inches(1.55), Inches(11.7), Inches(5.15), transparency=0.2)
+    add_glass_card(slide, Inches(0.8), Inches(1.55), Inches(8.6), Inches(5.15), transparency=0.2)
+    add_right_tech_panel(slide, unit, panel_label="FLOW")
 
     steps = unit.bullets[:5]
     if not steps:
@@ -706,9 +762,9 @@ def render_layout_d(slide, unit: SlideUnit) -> None:
     total = len(steps)
     for idx, step in enumerate(steps):
         if total == 1:
-            cx = Inches(6.35)
+            cx = Inches(4.75)
         else:
-            cx = Inches(1.25 + idx * (10.2 / (total - 1)))
+            cx = Inches(1.05 + idx * (6.9 / (total - 1)))
         cy = Inches(3.15)
 
         node = slide.shapes.add_shape(MSO_SHAPE.OVAL, cx, cy, Inches(0.52), Inches(0.52))
@@ -735,9 +791,9 @@ def render_layout_d(slide, unit: SlideUnit) -> None:
             arrow.line.fill.background()
 
 
-def add_cover(prs: Presentation, title: str, subtitle: str, logo_path: Path) -> None:
+def add_cover(prs: Presentation, title: str, subtitle: str, logo_path: Path, background_path: Path | None = None) -> None:
     slide = prs.slides.add_slide(prs.slide_layouts[6])
-    apply_theme(slide, prs, emphasize_texture=True)
+    apply_theme(slide, prs, background_path=background_path, emphasize_texture=True)
 
     hero = add_glass_card(slide, Inches(0.95), Inches(1.2), Inches(11.4), Inches(5.25), fill_color=COLOR_WHITE, transparency=0.16)
     hero.line.color.rgb = RGBColor(0xD7, 0xE0, 0xEF)
@@ -779,8 +835,11 @@ def add_cover(prs: Presentation, title: str, subtitle: str, logo_path: Path) -> 
     p3.text = f"赛道\n{TRACK_NAME}"
     set_para_style(p3, 12, COLOR_SUBTEXT)
 
+    cover_unit = SlideUnit(title=title, bullets=[subtitle, "Go MySQL Redis GitHub"])
+    add_right_tech_panel(slide, cover_unit, panel_label="COVER / TECH")
+
     if logo_path.exists():
-        slide.shapes.add_picture(str(logo_path), Inches(9.35), Inches(4.25), width=Inches(2.2))
+        slide.shapes.add_picture(str(logo_path), Inches(9.4), Inches(4.35), width=Inches(1.9))
 
 
 def extract_cover(sections: list[Section]) -> tuple[str, str]:
@@ -851,34 +910,35 @@ def build_padding_units() -> list[SlideUnit]:
     """Return fallback design slides used to pad content to the target page count."""
     # These fallback templates are defaults for this competition deck and should be customized per project.
     return [
-        SlideUnit(title="关键亮点", bullets=["智能评估链路闭环", "岗位匹配准确率提升", "全链路可解释反馈", "多模型融合增强鲁棒性"], layout_hint=LAYOUT_DEFAULT),
+        SlideUnit(title="关键亮点与创新", bullets=["智能评估链路闭环", "岗位匹配准确率提升", "全链路可解释反馈", "多模型融合增强鲁棒性"], layout_hint=LAYOUT_DEFAULT),
         SlideUnit(title="系统架构总览", bullets=["接入层：Web/API 网关", "服务层：画像/推荐/评估引擎", "数据层：MySQL + Redis + 向量检索", "治理层：监控告警与审计追踪"], layout_hint=LAYOUT_TIMELINE),
-        SlideUnit(title="技术栈设计", bullets=["Go + Gin + gRPC 微服务", "MySQL / Redis / Elasticsearch", "Docker + CI/CD 自动化交付", "Prompt + RAG + 工具调用"], layout_hint=LAYOUT_DOUBLE),
+        SlideUnit(title="技术栈设计", bullets=["Go + Gin + gRPC 微服务", "MySQL / Redis / PostgreSQL", "Docker + Kubernetes 自动化交付", "Nginx + GitHub Actions 持续集成"], layout_hint=LAYOUT_DOUBLE),
         SlideUnit(title="部署与运维", bullets=["容器化发布与灰度策略", "可观测：日志/指标/链路追踪", "自动扩缩容与资源治理", "安全策略与数据备份"], layout_hint=LAYOUT_DEFAULT),
-        SlideUnit(title=SUMMARY_TITLE, bullets=["已实现从测评到推荐的完整闭环", "下一步引入实时行为强化学习", "持续提升推荐质量与可解释性"], layout_hint=LAYOUT_CHAPTER, is_transition=True),
+        SlideUnit(title="演示流程", bullets=["登录与身份校验", "岗位画像生成", "智能问卷评估", "报告实时流式输出"], layout_hint=LAYOUT_TIMELINE),
     ]
 
 
 def build_content_units(sections: list[Section]) -> list[SlideUnit]:
-    """Build exactly TARGET_CONTENT_SLIDES content units via normalize/merge/pad steps."""
+    """Build fixed 19 content slides: agenda + 16 body + summary + Q&A."""
     raw_units: list[SlideUnit] = []
     for sec in sections:
         raw_units.extend(split_section(sec))
     raw_units = [normalize_unit(u) for u in raw_units]
-    # Reserve one content slot for the fixed agenda slide.
-    raw_units = merge_units_for_limit(raw_units, TARGET_CONTENT_SLIDES - 1)
-
-    content: list[SlideUnit] = [build_agenda_unit(raw_units)]
-    content.extend(raw_units)
+    body_target = 16
+    raw_units = merge_units_for_limit(raw_units, body_target)
 
     pads = build_padding_units()
     pad_idx = 0
-    while len(content) < TARGET_CONTENT_SLIDES:
+    while len(raw_units) < body_target:
         # Cycle through fallback templates using modulo when multiple padding pages are required.
-        content.append(pads[pad_idx % len(pads)])
+        raw_units.append(pads[pad_idx % len(pads)])
         pad_idx += 1
 
-    content = merge_units_for_limit(content, TARGET_CONTENT_SLIDES)
+    body_units = merge_units_for_limit(raw_units, body_target)[:body_target]
+    content: list[SlideUnit] = [build_agenda_unit(body_units)]
+    content.extend(body_units)
+    content.append(SlideUnit(title=SUMMARY_TITLE, bullets=["实现职业规划核心链路闭环", "强化推荐质量与可解释反馈", "下一步推进多模型协同优化"], layout_hint=LAYOUT_CHAPTER, is_transition=True))
+    content.append(SlideUnit(title="Q&A / 感谢", bullets=["期待专家指导与建议", "交流：技术方案与落地实践", f"队伍：{TEAM_NAME}"], layout_hint=LAYOUT_CHAPTER, is_transition=True))
     return content[:TARGET_CONTENT_SLIDES]
 
 
@@ -890,22 +950,27 @@ def build_ppt(md_paths: list[Path], output_path: Path, logo_path: Path) -> None:
     prs = Presentation()
     prs.slide_width = Inches(13.333)
     prs.slide_height = Inches(7.5)
+    backgrounds = resolve_backgrounds()
 
     title, subtitle = extract_cover(sections)
-    add_cover(prs, title, subtitle, logo_path)
+    cover_bg = backgrounds[0] if backgrounds else None
+    add_cover(prs, title, subtitle, logo_path, background_path=cover_bg)
 
     content_units = build_content_units(sections)
     page_no = 1
-    for unit in content_units:
+    for idx, unit in enumerate(content_units, start=1):
         slide = prs.slides.add_slide(prs.slide_layouts[6])
         layout = select_layout(unit)
-        apply_theme(slide, prs, emphasize_texture=(layout == LAYOUT_CHAPTER))
+        bg = backgrounds[idx % len(backgrounds)] if backgrounds else None
+        apply_theme(slide, prs, background_path=bg, emphasize_texture=(layout == LAYOUT_CHAPTER))
         if layout not in {LAYOUT_CHAPTER, LAYOUT_AGENDA}:
             add_title_block(slide, unit.title)
         if unit.table:
-            render_table_card(slide, unit.table, Inches(0.95), Inches(1.55), Inches(11.4), Inches(5.1))
+            render_table_card(slide, unit.table, Inches(0.95), Inches(1.55), Inches(8.45), Inches(5.1))
+            add_right_tech_panel(slide, unit, panel_label="DATA PANEL")
         elif unit.code_block:
-            render_code_card(slide, unit.code_block, Inches(0.95), Inches(1.55), Inches(11.4), Inches(5.1))
+            render_code_card(slide, unit.code_block, Inches(0.95), Inches(1.55), Inches(8.45), Inches(5.1))
+            add_right_tech_panel(slide, unit, panel_label="CODE PANEL")
         elif layout == LAYOUT_DOUBLE:
             render_layout_b(slide, unit)
         elif layout == LAYOUT_CHAPTER:
@@ -915,10 +980,7 @@ def build_ppt(md_paths: list[Path], output_path: Path, logo_path: Path) -> None:
         elif layout == LAYOUT_AGENDA:
             render_layout_e(slide, unit)
         else:
-            render_layout_a(slide, unit, logo_path)
-
-        if layout in {LAYOUT_DOUBLE, LAYOUT_TIMELINE, LAYOUT_AGENDA}:
-            add_go_logo_if_needed(slide, unit, logo_path)
+            render_layout_a(slide, unit)
 
         add_footer(slide, prs, page_no)
         page_no += 1

@@ -7,6 +7,9 @@
 - Markdown 内容源：`CareerPlanner — 基于 AI 的大学生职业规划智能体.md`
 - 风格参考 PDF：`比赛用的最终ppt.pdf`
 - Go Logo 资源：`assets/icons/go.png`
+- 技术图标资源：`assets/icons/*.png`（Go/Docker/MySQL/Redis/Kubernetes/PostgreSQL/Nginx/GitHub）
+- 科技背景素材：`assets/backgrounds/*.jpg`
+- 素材来源与许可：`assets/ATTRIBUTION.md`
 
 ## 固定信息（封面/页脚）
 
@@ -36,11 +39,13 @@ python tools/generate_ppt.py \
 ## 生成特性（本次改造）
 
 - 固定总页数策略：输出严格 `20` 页（封面 1 页 + 内容 19 页）
+  - 结构固定为：1 封面、2 目录、3~18 内容、19 总结与展望、20 Q&A/感谢
   - 内容超出时：自动合并相邻小节并摘要（每页 3~5 条要点）
-  - 内容不足时：自动补齐目录/亮点/架构/技术栈/部署/总结等设计型页面
+  - 内容不足时：自动补齐亮点/架构/技术栈/部署/演示流程等设计型页面
+- 背景镶嵌：每页自动加载科技背景图，并叠加白色蒙层保持灰白干净基调
+- 右侧固定数码面板：统一放置技术 logo（最多 4 个）+ 标签 + 关键字，避免页面过空
 - 统一主题组件：顶部强调条、标题分隔线、玻璃卡片（浅透白 + 冷灰蓝描边 + 轻阴影）、统一页脚与页码
 - 轻量数码背景纹理：低对比 PCB 线条/点阵 + HUD 圆弧（章节页会稍增强）
-- 右侧装饰区：线框屏幕轮廓 + 冷蓝高光，保持克制且不抢正文
 - 多布局模板：Cover / Agenda / Section Divider / Content Left+Right Panel / Two-column Cards / Timeline
 - 多布局自动选择：
   - Layout A（左文右图标区）
@@ -51,4 +56,4 @@ python tools/generate_ppt.py \
   - 要点超过阈值自动拆页并添加 `(1/2)` 标记
   - Markdown 表格渲染为卡片式两列对齐
   - Markdown 代码块渲染为深色代码卡片（等宽字体）
-- Go 图标规则：标题/要点命中 `Go/golang/gin/grpc/编译/Go语言` 时自动放置 `assets/icons/go.png`
+- 多技术图标规则：标题/要点命中关键词时自动放置对应 logo（Go/Docker/MySQL/Redis/K8s/PostgreSQL/Nginx/GitHub）
