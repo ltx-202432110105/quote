@@ -24,6 +24,7 @@ COLOR_TEXT = RGBColor(0x11, 0x18, 0x27)
 COLOR_SUBTEXT = RGBColor(0x4B, 0x55, 0x63)
 COLOR_LINE = RGBColor(0xAA, 0xB4, 0xC3)
 COLOR_CODE_BG = RGBColor(0x1F, 0x29, 0x37)
+COLOR_CODE_BORDER = RGBColor(0x2F, 0x3C, 0x52)
 COLOR_GLASS = RGBColor(0xFF, 0xFF, 0xFF)
 COLOR_GLASS_BORDER = RGBColor(0xD5, 0xDF, 0xEA)
 COLOR_DECOR = RGBColor(0x8B, 0xA3, 0xC7)
@@ -52,6 +53,7 @@ TEXTURE_TRANSPARENCY_EMPHASIS = 0.89
 TEXTURE_TRANSPARENCY_DEFAULT = 0.94
 TEXTURE_DOT_TRANSPARENCY = 0.85
 TEXTURE_ARC_TRANSPARENCY = 0.86
+# Dot coordinate tuples are (x, y) in inches relative to slide origin.
 TEXTURE_DOTS_EMPHASIS = [(8.55, 1.7), (9.1, 2.2), (10.35, 3.0), (11.2, 4.25)]
 TEXTURE_DOTS_DEFAULT = [(10.9, 3.15), (11.35, 3.7)]
 
@@ -439,7 +441,7 @@ def render_table_card(slide, table: TableData, x, y, w, h) -> None:
 
 
 def render_code_card(slide, code_lines: list[str], x, y, w, h) -> None:
-    card = add_glass_card(slide, x, y, w, h, fill_color=COLOR_CODE_BG, border_color=RGBColor(0x2F, 0x3C, 0x52), transparency=0)
+    card = add_glass_card(slide, x, y, w, h, fill_color=COLOR_CODE_BG, border_color=COLOR_CODE_BORDER, transparency=0)
     # Tune corner radius ratio for a cleaner digital panel style.
     card.adjustments[0] = 0.12
 
@@ -476,7 +478,7 @@ def add_go_logo_if_needed(slide, unit: SlideUnit, logo_path: Path) -> None:
         slide.shapes.add_picture(str(logo_path), GO_LOGO_X, GO_LOGO_Y, width=GO_LOGO_WIDTH)
 
 
-def add_right_tech_decor(slide, panel_label: str = "技术面板") -> None:
+def add_right_tech_panel(slide, panel_label: str = "技术面板") -> None:
     panel = add_glass_card(slide, Inches(9.65), Inches(1.45), Inches(2.85), Inches(5.35), fill_color=RGBColor(0xF8, 0xFB, 0xFF), transparency=0.26)
     ptf = panel.text_frame
     ptf.clear()
@@ -513,7 +515,7 @@ def add_right_tech_decor(slide, panel_label: str = "技术面板") -> None:
 def render_layout_a(slide, unit: SlideUnit, logo_path: Path) -> None:
     add_glass_card(slide, Inches(0.8), Inches(1.45), Inches(8.6), Inches(5.35), transparency=0.2)
     add_bullets(slide, unit.bullets, Inches(1.05), Inches(1.72), Inches(8.1), Inches(4.8), size=16)
-    add_right_tech_decor(slide)
+    add_right_tech_panel(slide)
     add_go_logo_if_needed(slide, unit, logo_path)
 
 
