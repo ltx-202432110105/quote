@@ -38,6 +38,10 @@ MAX_CODE_LINES = 8
 MAX_TABLE_ROWS = 6
 TARGET_TOTAL_SLIDES = 20
 TARGET_CONTENT_SLIDES = TARGET_TOTAL_SLIDES - 1
+MAX_AGENDA_ITEMS = 8
+MERGE_TABLE_PENALTY = 4
+MERGE_CODE_PENALTY = 4
+PLACEHOLDER_BULLET = "待补充内容"
 GO_KEYWORDS = ("go", "golang", "gin", "grpc", "编译", "go语言")
 PROCESS_KEYWORDS = ("流程", "步骤", "阶段", "演进", "架构")
 CHAPTER_KEYWORDS = ("总结", "感谢", "目录", "展望", "第", "功能")
@@ -199,7 +203,7 @@ def chunk_bullets(bullets: list[str], chunk_size: int) -> list[list[str]]:
     return [bullets[i:i + chunk_size] for i in range(0, len(bullets), chunk_size)]
 
 
-def shorten_title(title: str, max_len: int = 18) -> str:
+def normalize_and_shorten_title(title: str, max_len: int = 18) -> str:
     """Normalize a section title into concise PPT-friendly text with length cap."""
     t = cleanup_text(title).replace("：", " ").replace("—", " ")
     t = re.sub(r"^第\s*\d+\s*页\s*[-—:：]?\s*", "", t)
@@ -214,7 +218,7 @@ def summarize_bullets(bullets: list[str], max_items: int = MAX_BULLETS_PER_SLIDE
     """Limit bullet count to max_items and append an overflow summary note when needed."""
     cleaned = [cleanup_text(x) for x in bullets if cleanup_text(x)]
     if not cleaned:
-        return ["核心内容待补充"]
+        return [PLACEHOLDER_BULLET]
     if len(cleaned) <= max_items:
         return cleaned
     summarized = cleaned[:max_items - 1]
@@ -224,7 +228,7 @@ def summarize_bullets(bullets: list[str], max_items: int = MAX_BULLETS_PER_SLIDE
 
 def split_section(section: Section) -> list[SlideUnit]:
     units: list[SlideUnit] = []
-    title = shorten_title(section.title, max_len=22)
+    title = normalize_and_shorten_title(section.title, max_len=22)
 
     if section.bullets:
         chunks = chunk_bullets(section.bullets, MAX_BULLETS_PER_SLIDE)
@@ -237,7 +241,7 @@ def split_section(section: Section) -> list[SlideUnit]:
             units.append(SlideUnit(title=chunk_title, bullets=summarize_bullets(chunk)))
 
     if not section.bullets and not section.tables and not section.code_blocks:
-        units.append(SlideUnit(title=title, bullets=["核心内容待补充"]))
+        units.append(SlideUnit(title=title, bullets=[PLACEHOLDER_BULLET]))
 
     for table in section.tables[:1]:
         units.append(SlideUnit(title=title, table=table))
@@ -787,7 +791,7 @@ def extract_cover(sections: list[Section]) -> tuple[str, str]:
 def normalize_unit(unit: SlideUnit) -> SlideUnit:
     """Create a compact unit with shortened title and bounded bullets for slide rendering."""
     return SlideUnit(
-        title=shorten_title(unit.title, max_len=18),
+        title=normalize_and_shorten_title(unit.title, max_len=18),
         bullets=summarize_bullets(unit.bullets),
         table=unit.table,
         code_block=unit.code_block,
@@ -805,15 +809,15 @@ def merge_units_for_limit(units: list[SlideUnit], target: int) -> list[SlideUnit
         for i in range(len(merged) - 1):
             score = len(merged[i].bullets) + len(merged[i + 1].bullets)
             if merged[i].table or merged[i + 1].table:
-                score += 4
+                score += MERGE_TABLE_PENALTY
             if merged[i].code_block or merged[i + 1].code_block:
-                score += 4
+                score += MERGE_CODE_PENALTY
             if score < best_score:
                 best_score = score
                 best_idx = i
         a = merged[best_idx]
         b = merged[best_idx + 1]
-        title = shorten_title(a.title, max_len=20)
+        title = normalize_and_shorten_title(a.title, max_len=20)
         bullets = summarize_bullets([*a.bullets, *b.bullets], MAX_BULLETS_PER_SLIDE)
         merged_unit = SlideUnit(
             title=title,
@@ -829,14 +833,15 @@ def merge_units_for_limit(units: list[SlideUnit], target: int) -> list[SlideUnit
 
 def build_agenda_unit(units: list[SlideUnit]) -> SlideUnit:
     """Build a fixed agenda slide from the first key unit titles."""
-    agenda_items = [shorten_title(u.title, max_len=20) for u in units[:8]]
-    if len(units) > 8:
+    agenda_items = [normalize_and_shorten_title(u.title, max_len=20) for u in units[:MAX_AGENDA_ITEMS]]
+    if len(units) > MAX_AGENDA_ITEMS:
         agenda_items[-1] = "总结与展望"
     return SlideUnit(title="目录总览", bullets=agenda_items or ["项目概览", "系统设计", "技术实现", "总结展望"], layout_hint=LAYOUT_AGENDA)
 
 
 def build_padding_units() -> list[SlideUnit]:
     """Return fallback design slides used to pad content to the target page count."""
+    # These fallback slide templates are intentionally generic and can be customized per project.
     return [
         SlideUnit(title="关键亮点", bullets=["智能评估链路闭环", "岗位匹配准确率提升", "全链路可解释反馈", "多模型融合增强鲁棒性"], layout_hint=LAYOUT_DEFAULT),
         SlideUnit(title="系统架构总览", bullets=["接入层：Web/API 网关", "服务层：画像/推荐/评估引擎", "数据层：MySQL + Redis + 向量检索", "治理层：监控告警与审计追踪"], layout_hint=LAYOUT_TIMELINE),
