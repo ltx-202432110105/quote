@@ -176,7 +176,7 @@ def split_section(section: Section) -> list[SlideUnit]:
         total = len(chunks)
         for idx, chunk in enumerate(chunks, start=1):
             title = section.title
-            if len(section.bullets) > 8 and total > 1:
+            if len(section.bullets) > MAX_BULLETS_PER_SLIDE and total > 1:
                 title = f"{section.title}（{idx}/{total}）"
             units.append(SlideUnit(title=title, bullets=chunk))
 
@@ -367,6 +367,7 @@ def render_table_card(slide, table: TableData, x, y, w, h) -> None:
 
 def render_code_card(slide, code_lines: list[str], x, y, w, h) -> None:
     card = add_card(slide, x, y, w, h, fill_color=COLOR_CODE_BG, border_color=RGBColor(0x2F, 0x3C, 0x52))
+    # 调整圆角半径比例，让代码卡片更接近数码风面板观感。
     card.adjustments[0] = 0.12
 
     tag = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, x + Inches(0.14), y + Inches(0.10), Inches(1.0), Inches(0.28))
@@ -464,7 +465,10 @@ def render_layout_d(slide, unit: SlideUnit) -> None:
 
     total = len(steps)
     for idx, step in enumerate(steps):
-        cx = Inches(1.25 + idx * (10.2 / max(1, total - 1)))
+        if total == 1:
+            cx = Inches(6.35)
+        else:
+            cx = Inches(1.25 + idx * (10.2 / (total - 1)))
         cy = Inches(3.15)
 
         node = slide.shapes.add_shape(MSO_SHAPE.OVAL, cx, cy, Inches(0.52), Inches(0.52))
