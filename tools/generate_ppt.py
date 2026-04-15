@@ -30,6 +30,8 @@ SCHOOL_NAME = "浙江师范大学"
 TRACK_NAME = "A类"
 
 MAX_BULLETS_PER_SLIDE = 8
+MAX_CODE_LINES = 10
+MAX_TABLE_ROWS = 6
 GO_KEYWORDS = ("go", "golang", "gin", "grpc", "编译", "go语言")
 PROCESS_KEYWORDS = ("流程", "步骤", "阶段", "演进", "架构")
 CHAPTER_KEYWORDS = ("总结", "感谢", "目录", "展望", "第", "功能")
@@ -171,11 +173,15 @@ def cleanup_text(text: str) -> str:
     return text.strip()
 
 
+def chunk_bullets(bullets: list[str], chunk_size: int) -> list[list[str]]:
+    return [bullets[i:i + chunk_size] for i in range(0, len(bullets), chunk_size)]
+
+
 def split_section(section: Section) -> list[SlideUnit]:
     units: list[SlideUnit] = []
 
     if section.bullets:
-        chunks = [section.bullets[i:i + MAX_BULLETS_PER_SLIDE] for i in range(0, len(section.bullets), MAX_BULLETS_PER_SLIDE)]
+        chunks = chunk_bullets(section.bullets, MAX_BULLETS_PER_SLIDE)
         total = len(chunks)
         for idx, chunk in enumerate(chunks, start=1):
             title = section.title
@@ -190,7 +196,7 @@ def split_section(section: Section) -> list[SlideUnit]:
         units.append(SlideUnit(title=section.title, table=table))
 
     for code in section.code_blocks[:1]:
-        units.append(SlideUnit(title=section.title, code_block=code[:10]))
+        units.append(SlideUnit(title=section.title, code_block=code[:MAX_CODE_LINES]))
 
     if should_use_transition(section.title, section.bullets) and units:
         units[0].is_transition = True
@@ -344,8 +350,8 @@ def render_table_card(slide, table: TableData, x, y, w, h) -> None:
     set_para_style(p2, 13, COLOR_PRIMARY, bold=True)
 
     row_start = y + Inches(0.58)
-    row_h = min(Inches(0.62), (h - Inches(0.75)) / max(1, len(table.rows[:6])))
-    for idx, (left_text, right_text) in enumerate(table.rows[:6]):
+    row_h = min(Inches(0.62), (h - Inches(0.75)) / max(1, len(table.rows[:MAX_TABLE_ROWS])))
+    for idx, (left_text, right_text) in enumerate(table.rows[:MAX_TABLE_ROWS]):
         ry = row_start + idx * row_h
         if idx > 0:
             sep = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, x + Inches(0.16), ry - Inches(0.04), w - Inches(0.32), Inches(0.01))
@@ -389,7 +395,7 @@ def render_code_card(slide, code_lines: list[str], x, y, w, h) -> None:
     tf.word_wrap = True
     tf.vertical_anchor = MSO_ANCHOR.TOP
 
-    for idx, line in enumerate(code_lines[:10]):
+    for idx, line in enumerate(code_lines[:MAX_CODE_LINES]):
         p = tf.paragraphs[0] if idx == 0 else tf.add_paragraph()
         p.text = line
         if not p.runs:
