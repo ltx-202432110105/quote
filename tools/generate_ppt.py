@@ -343,6 +343,12 @@ def resolve_backgrounds() -> list[Path]:
     return [p for p in files if p.is_file() and p.suffix.lower() in {".jpg", ".jpeg", ".png"}]
 
 
+def pick_background(backgrounds: list[Path], index: int) -> Path | None:
+    if not backgrounds:
+        return None
+    return backgrounds[index % len(backgrounds)]
+
+
 def apply_theme(slide, prs: Presentation, background_path: Path | None = None, emphasize_texture: bool = False) -> None:
     bg = slide.background.fill
     bg.solid()
@@ -845,7 +851,7 @@ def add_cover(prs: Presentation, title: str, subtitle: str, logo_path: Path, bac
     p3.text = f"赛道\n{TRACK_NAME}"
     set_para_style(p3, 12, COLOR_SUBTEXT)
 
-    cover_tech = " ".join(ICON_DISPLAY_NAMES.values())
+    cover_tech = " / ".join(list(ICON_DISPLAY_NAMES.values())[:4])
     cover_unit = SlideUnit(title=title, bullets=[subtitle, cover_tech])
     add_right_tech_panel(slide, cover_unit, panel_label="COVER / TECH")
 
@@ -964,7 +970,7 @@ def build_ppt(md_paths: list[Path], output_path: Path, logo_path: Path) -> None:
     backgrounds = resolve_backgrounds()
 
     title, subtitle = extract_cover(sections)
-    cover_bg = backgrounds[0] if backgrounds else None
+    cover_bg = pick_background(backgrounds, 0)
     add_cover(prs, title, subtitle, logo_path, background_path=cover_bg)
 
     content_units = build_content_units(sections)
@@ -972,7 +978,7 @@ def build_ppt(md_paths: list[Path], output_path: Path, logo_path: Path) -> None:
     for idx, unit in enumerate(content_units, start=1):
         slide = prs.slides.add_slide(prs.slide_layouts[6])
         layout = select_layout(unit)
-        bg = backgrounds[idx % len(backgrounds)] if backgrounds else None
+        bg = pick_background(backgrounds, idx)
         apply_theme(slide, prs, background_path=bg, emphasize_texture=(layout == LAYOUT_CHAPTER))
         if layout not in {LAYOUT_CHAPTER, LAYOUT_AGENDA}:
             add_title_block(slide, unit.title)
