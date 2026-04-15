@@ -24,6 +24,9 @@ COLOR_TEXT = RGBColor(0x11, 0x18, 0x27)
 COLOR_SUBTEXT = RGBColor(0x4B, 0x55, 0x63)
 COLOR_LINE = RGBColor(0xAA, 0xB4, 0xC3)
 COLOR_CODE_BG = RGBColor(0x1F, 0x29, 0x37)
+COLOR_GLASS = RGBColor(0xFF, 0xFF, 0xFF)
+COLOR_GLASS_BORDER = RGBColor(0xD5, 0xDF, 0xEA)
+COLOR_DECOR = RGBColor(0x8B, 0xA3, 0xC7)
 
 TEAM_NAME = "我们叫什么名字"
 SCHOOL_NAME = "浙江师范大学"
@@ -38,6 +41,7 @@ CHAPTER_KEYWORDS = ("总结", "感谢", "目录", "展望", "第", "功能")
 MARKDOWN_LANGUAGE_MARKERS = {"text", "yaml", "json", "sql", "go", "bash"}
 TECH_LAYOUT_KEYWORDS = ("架构", "技术", "部署", "实现")
 REFERENCE_PDF = "比赛用的最终ppt.pdf"
+GO_LOGO_ANCHOR = (Inches(10.7), Inches(1.52), Inches(2.0))
 
 
 @dataclass
@@ -228,7 +232,7 @@ def need_go_logo(unit: SlideUnit) -> bool:
     return any(k in txt for k in GO_KEYWORDS)
 
 
-def apply_theme(slide, prs: Presentation) -> None:
+def apply_theme(slide, prs: Presentation, emphasize_texture: bool = False) -> None:
     bg = slide.background.fill
     bg.solid()
     bg.fore_color.rgb = COLOR_BG
@@ -238,6 +242,7 @@ def apply_theme(slide, prs: Presentation) -> None:
     top_strip.fill.fore_color.rgb = COLOR_PRIMARY
     top_strip.line.fill.background()
 
+    add_background_texture(slide, emphasize=emphasize_texture)
     add_hud_decor(slide)
 
 
@@ -261,6 +266,40 @@ def add_hud_decor(slide) -> None:
     right_side.fill.solid()
     right_side.fill.fore_color.rgb = COLOR_LINE
     right_side.line.fill.background()
+
+
+def add_background_texture(slide, emphasize: bool = False) -> None:
+    opacity = 0.89 if emphasize else 0.94
+    h_lines = [Inches(1.9), Inches(3.25)] if emphasize else [Inches(4.75)]
+    v_lines = [Inches(8.35), Inches(9.85)] if emphasize else [Inches(11.25)]
+    dots = [(8.55, 1.7), (9.1, 2.2), (10.35, 3.0), (11.2, 4.25)] if emphasize else [(10.9, 3.15), (11.35, 3.7)]
+
+    for y in h_lines:
+        line = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(1.0), y, Inches(6.3), Inches(0.01))
+        line.fill.solid()
+        line.fill.fore_color.rgb = COLOR_DECOR
+        line.fill.transparency = opacity
+        line.line.fill.background()
+
+    for x in v_lines:
+        line = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, x, Inches(1.55), Inches(0.01), Inches(3.7))
+        line.fill.solid()
+        line.fill.fore_color.rgb = COLOR_DECOR
+        line.fill.transparency = opacity
+        line.line.fill.background()
+
+    for x, y in dots:
+        dot = slide.shapes.add_shape(MSO_SHAPE.OVAL, Inches(x), Inches(y), Inches(0.05), Inches(0.05))
+        dot.fill.solid()
+        dot.fill.fore_color.rgb = COLOR_DECOR
+        dot.fill.transparency = 0.85
+        dot.line.fill.background()
+
+    arc = slide.shapes.add_shape(MSO_SHAPE.ARC, Inches(10.55), Inches(4.45), Inches(1.65), Inches(1.1))
+    arc.fill.background()
+    arc.line.color.rgb = COLOR_DECOR
+    arc.line.width = Pt(1)
+    arc.line.transparency = 0.86
 
 
 def add_title_block(slide, title: str) -> None:
@@ -298,17 +337,30 @@ def add_footer(slide, prs: Presentation, page_no: int) -> None:
     set_para_style(p2, 10, COLOR_SUBTEXT, align=PP_ALIGN.RIGHT)
 
 
-def add_card(slide, x, y, w, h, fill_color: RGBColor = COLOR_WHITE, border_color: RGBColor = COLOR_LINE):
+def add_glass_card(
+    slide,
+    x,
+    y,
+    w,
+    h,
+    fill_color: RGBColor = COLOR_GLASS,
+    border_color: RGBColor = COLOR_GLASS_BORDER,
+    transparency: float = 0.22,
+):
     shadow = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, x + Pt(1), y + Pt(1), w, h)
     shadow.fill.solid()
     shadow.fill.fore_color.rgb = RGBColor(0xE9, 0xEE, 0xF4)
+    shadow.fill.transparency = 0.65
     shadow.line.fill.background()
+    shadow.adjustments[0] = 0.14
 
     card = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, x, y, w, h)
     card.fill.solid()
     card.fill.fore_color.rgb = fill_color
+    card.fill.transparency = transparency
     card.line.color.rgb = border_color
     card.line.width = Pt(1)
+    card.adjustments[0] = 0.14
     return card
 
 
@@ -327,7 +379,7 @@ def add_bullets(slide, bullets: list[str], x, y, w, h, size=16) -> None:
 
 
 def render_table_card(slide, table: TableData, x, y, w, h) -> None:
-    add_card(slide, x, y, w, h)
+    add_glass_card(slide, x, y, w, h, transparency=0.18)
 
     header = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, x + Inches(0.12), y + Inches(0.10), w - Inches(0.24), Inches(0.42))
     header.fill.solid()
@@ -375,7 +427,7 @@ def render_table_card(slide, table: TableData, x, y, w, h) -> None:
 
 
 def render_code_card(slide, code_lines: list[str], x, y, w, h) -> None:
-    card = add_card(slide, x, y, w, h, fill_color=COLOR_CODE_BG, border_color=RGBColor(0x2F, 0x3C, 0x52))
+    card = add_glass_card(slide, x, y, w, h, fill_color=COLOR_CODE_BG, border_color=RGBColor(0x2F, 0x3C, 0x52), transparency=0)
     # Tune corner radius ratio for a cleaner digital panel style.
     card.adjustments[0] = 0.12
 
@@ -409,26 +461,54 @@ def render_code_card(slide, code_lines: list[str], x, y, w, h) -> None:
 
 def add_go_logo_if_needed(slide, unit: SlideUnit, logo_path: Path) -> None:
     if need_go_logo(unit) and logo_path.exists():
-        slide.shapes.add_picture(str(logo_path), Inches(10.7), Inches(1.45), width=Inches(2.1))
+        x, y, w = GO_LOGO_ANCHOR
+        slide.shapes.add_picture(str(logo_path), x, y, width=w)
+
+
+def add_right_tech_decor(slide, title: str = "TECH PANEL") -> None:
+    panel = add_glass_card(slide, Inches(9.65), Inches(1.45), Inches(2.85), Inches(5.35), fill_color=RGBColor(0xF8, 0xFB, 0xFF), transparency=0.26)
+    ptf = panel.text_frame
+    ptf.clear()
+    p = ptf.paragraphs[0]
+    p.text = title
+    set_para_style(p, 11, COLOR_SUBTEXT, align=PP_ALIGN.CENTER)
+
+    frame = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(10.1), Inches(3.15), Inches(1.9), Inches(1.35))
+    frame.fill.background()
+    frame.line.color.rgb = COLOR_DECOR
+    frame.line.transparency = 0.5
+    frame.line.width = Pt(1.2)
+    frame.adjustments[0] = 0.08
+
+    screen = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(10.26), Inches(3.32), Inches(1.58), Inches(0.9))
+    screen.fill.background()
+    screen.line.color.rgb = COLOR_DECOR
+    screen.line.transparency = 0.66
+    screen.line.width = Pt(1)
+
+    base = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(10.82), Inches(4.28), Inches(0.5), Inches(0.08))
+    base.fill.solid()
+    base.fill.fore_color.rgb = COLOR_DECOR
+    base.fill.transparency = 0.75
+    base.line.fill.background()
+
+    glow = slide.shapes.add_shape(MSO_SHAPE.ARC, Inches(9.92), Inches(2.9), Inches(2.25), Inches(1.75))
+    glow.fill.background()
+    glow.line.color.rgb = COLOR_PRIMARY
+    glow.line.transparency = 0.86
+    glow.line.width = Pt(1)
 
 
 def render_layout_a(slide, unit: SlideUnit, logo_path: Path) -> None:
-    add_card(slide, Inches(0.8), Inches(1.45), Inches(8.6), Inches(5.35))
+    add_glass_card(slide, Inches(0.8), Inches(1.45), Inches(8.6), Inches(5.35), transparency=0.2)
     add_bullets(slide, unit.bullets, Inches(1.05), Inches(1.72), Inches(8.1), Inches(4.8), size=16)
-
-    side = add_card(slide, Inches(9.65), Inches(1.45), Inches(2.85), Inches(5.35), fill_color=RGBColor(0xF9, 0xFB, 0xFF))
-    side_tf = side.text_frame
-    side_tf.clear()
-    p = side_tf.paragraphs[0]
-    p.text = "技术插图区"
-    set_para_style(p, 12, COLOR_SUBTEXT, align=PP_ALIGN.CENTER)
-
+    add_right_tech_decor(slide)
     add_go_logo_if_needed(slide, unit, logo_path)
 
 
 def render_layout_b(slide, unit: SlideUnit) -> None:
-    add_card(slide, Inches(0.8), Inches(1.45), Inches(5.85), Inches(5.35))
-    add_card(slide, Inches(6.65), Inches(1.45), Inches(5.85), Inches(5.35))
+    add_glass_card(slide, Inches(0.8), Inches(1.45), Inches(5.85), Inches(5.35), transparency=0.2)
+    add_glass_card(slide, Inches(6.65), Inches(1.45), Inches(5.85), Inches(5.35), transparency=0.2)
 
     mid = (len(unit.bullets) + 1) // 2
     left = unit.bullets[:mid]
@@ -439,34 +519,49 @@ def render_layout_b(slide, unit: SlideUnit) -> None:
 
 
 def render_layout_c(slide, unit: SlideUnit) -> None:
-    badge = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.95), Inches(1.85), Inches(1.5), Inches(0.6))
+    badge_text = "SECTION"
+    match = re.search(r"第\s*(\d+)\s*页", unit.title)
+    if match:
+        badge_text = f"SECTION {match.group(1)}"
+
+    badge = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.95), Inches(1.78), Inches(2.05), Inches(0.56))
     badge.fill.solid()
     badge.fill.fore_color.rgb = RGBColor(0xE9, 0xF0, 0xFF)
+    badge.fill.transparency = 0.18
     badge.line.fill.background()
     tf = badge.text_frame
     tf.clear()
     p = tf.paragraphs[0]
-    p.text = "SECTION"
+    p.text = badge_text
     set_para_style(p, 14, COLOR_PRIMARY, bold=True, align=PP_ALIGN.CENTER)
 
-    tbox = slide.shapes.add_textbox(Inches(0.95), Inches(2.65), Inches(10.2), Inches(2.2))
+    glass = add_glass_card(slide, Inches(0.95), Inches(2.45), Inches(9.55), Inches(2.55), transparency=0.22)
+    glass.line.color.rgb = RGBColor(0xD7, 0xE2, 0xEF)
+
+    tbox = slide.shapes.add_textbox(Inches(1.25), Inches(2.8), Inches(9.0), Inches(2.0))
     ttf = tbox.text_frame
     ttf.clear()
     p2 = ttf.paragraphs[0]
     p2.text = unit.title
-    set_para_style(p2, 38, COLOR_TEXT, bold=True)
+    set_para_style(p2, 40, COLOR_TEXT, bold=True)
 
     if unit.bullets:
-        sbox = slide.shapes.add_textbox(Inches(0.95), Inches(5.05), Inches(9.0), Inches(1.0))
+        sbox = slide.shapes.add_textbox(Inches(1.25), Inches(5.28), Inches(8.8), Inches(0.9))
         stf = sbox.text_frame
         stf.clear()
         p3 = stf.paragraphs[0]
         p3.text = unit.bullets[0]
         set_para_style(p3, 18, COLOR_SUBTEXT)
 
+    arc = slide.shapes.add_shape(MSO_SHAPE.ARC, Inches(10.8), Inches(4.9), Inches(1.7), Inches(1.2))
+    arc.fill.background()
+    arc.line.color.rgb = COLOR_PRIMARY
+    arc.line.transparency = 0.86
+    arc.line.width = Pt(1.2)
+
 
 def render_layout_d(slide, unit: SlideUnit) -> None:
-    add_card(slide, Inches(0.8), Inches(1.55), Inches(11.7), Inches(5.15))
+    add_glass_card(slide, Inches(0.8), Inches(1.55), Inches(11.7), Inches(5.15), transparency=0.2)
 
     steps = unit.bullets[:5]
     if not steps:
@@ -506,9 +601,9 @@ def render_layout_d(slide, unit: SlideUnit) -> None:
 
 def add_cover(prs: Presentation, title: str, subtitle: str, logo_path: Path) -> None:
     slide = prs.slides.add_slide(prs.slide_layouts[6])
-    apply_theme(slide, prs)
+    apply_theme(slide, prs, emphasize_texture=True)
 
-    hero = add_card(slide, Inches(0.95), Inches(1.2), Inches(11.4), Inches(5.25), fill_color=COLOR_WHITE)
+    hero = add_glass_card(slide, Inches(0.95), Inches(1.2), Inches(11.4), Inches(5.25), fill_color=COLOR_WHITE, transparency=0.16)
     hero.line.color.rgb = RGBColor(0xD7, 0xE0, 0xEF)
 
     tag = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(1.25), Inches(1.55), Inches(2.0), Inches(0.52))
@@ -535,7 +630,7 @@ def add_cover(prs: Presentation, title: str, subtitle: str, logo_path: Path) -> 
     sp.text = subtitle
     set_para_style(sp, 18, COLOR_SUBTEXT)
 
-    info = add_card(slide, Inches(9.0), Inches(2.0), Inches(2.95), Inches(2.8), fill_color=RGBColor(0xFB, 0xFC, 0xFF))
+    info = add_glass_card(slide, Inches(9.0), Inches(2.0), Inches(2.95), Inches(2.8), fill_color=RGBColor(0xFB, 0xFC, 0xFF), transparency=0.2)
     itf = info.text_frame
     itf.clear()
     p1 = itf.paragraphs[0]
@@ -581,10 +676,10 @@ def build_ppt(md_paths: list[Path], output_path: Path, logo_path: Path) -> None:
     for sec in sections:
         for unit in split_section(sec):
             slide = prs.slides.add_slide(prs.slide_layouts[6])
-            apply_theme(slide, prs)
-            add_title_block(slide, unit.title)
-
             layout = select_layout(unit)
+            apply_theme(slide, prs, emphasize_texture=(layout == "C"))
+            if layout != "C":
+                add_title_block(slide, unit.title)
             if unit.table:
                 render_table_card(slide, unit.table, Inches(0.95), Inches(1.55), Inches(11.4), Inches(5.1))
             elif unit.code_block:
