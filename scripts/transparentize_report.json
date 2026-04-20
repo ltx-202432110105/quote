@@ -1,0 +1,10 @@
+{
+  "results": [
+    {
+      "file": "Redis_Logo.png",
+      "status": "skipped",
+      "reason": "Image already has a transparent background.",
+      "output": null
+    }
+  ]
+}
